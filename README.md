@@ -1,4 +1,4 @@
 neuralnet.py
 ========
 
-A vectorized implementation of a artificial neural network learning algorithm written in python using numpy.
+A vectorized implementation of an artificial neural network learning algorithm written in python using numpy.
