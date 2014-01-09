@@ -62,14 +62,12 @@ class NeuralNetClassifier():
 				# back propagate the error
 				delta = self.back_prop(X[i], y[i], a)
 			
-				# calculate Delta accumulations
-				self.D += np.dot(delta, a)
-
 			# compute the partial derivative terms with regularization
-			# grad = ...
+			self.D = (1.0/self.m * delta) + (self.lmbda * self.theta)
+			print self.D
 
 			# perform gradient checking
-			grad_estimate = self.estimate_gradient()
+			# grad_estimate = self.estimate_gradient()
 
 			# update theta parameters
 			# self.theta = ...
@@ -116,23 +114,14 @@ class NeuralNetClassifier():
 		activations = self.get_activation_arrays(a_)
 		thetas = self.get_parameter_arrays(self.theta)
 		
-		# for at, t in zip(activations, thetas):
-		# 	print at
-		# 	print t
-		# 	print
-		# # raise
-		# print
-		# print y
-		# print activations[-1] - y
-		# raise
-		deltas = [activations[-1] - y] # delta 3
+		deltas = [activations[-1] - y] # delta_L
 		# iterate through layer activation values in reverse order to calulate delta_j
 		for i, params in enumerate(reversed(zip(activations[:-1], thetas[1:]))):
-			# deltas.append()
 			a, theta = params
 			print np.dot(theta.T, deltas[i]) * np.hstack((1, (a * (1 - a))))
-			deltas.append(np.dot(theta.T, deltas[i]) * np.hstack((1, (a * (1 - a))))) # delta 2
+			deltas.append(np.dot(theta.T, deltas[i]) * np.hstack((1, (a * (1 - a))))) # delta_j
 
+		# debugging backprop...
 		print
 		deltas.reverse()
 		big_deltas = self.get_parameter_arrays(self.D)
@@ -151,6 +140,7 @@ class NeuralNetClassifier():
 			print D_tmp
 			D_ = np.hstack((D_, D_tmp.flatten()))
 		print D_
+		return D_
 
 	def compute_cost(self, y, h_x):
 		# compute the cost function J(theta) using the regularization term lmbda
