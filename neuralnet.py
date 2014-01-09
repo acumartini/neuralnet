@@ -18,7 +18,7 @@ class NeuralNetClassifier():
 		self.epsilon = 0.00001 # convergence measure
 		self.threshold = 0.5 # the class prediction threshold
 
-		# calculate theta layer indices and shapes
+		# build network architecture by computing theta layer indices and shapes
 		self.indices = [] # store theta layer divisions in the flattened theta array
 		self.shapes = [] # store theta layer shapes for reshaping
 		for i in xrange(len(self.units)-1):
@@ -36,15 +36,16 @@ class NeuralNetClassifier():
 		return "<Neural Network Classifier Instance: layers=" + str(self.layers) + \
 			   ", units=" + str(self.units) + ">\n"
 
-	def fit(self, X_, y):
+	def fit(self, X, y):
 		"""
 		This function optimizes the parameters for the neural network classification model from 
 		training data
 		@post: parameter(theta) optimized by forward and back propagation
 		"""
-		X = self.add_ones(X_) # prepend ones to training set for theta_0 calculations
 		self.n = X.shape[1] # the number of features
 		self.m = X.shape[0] # the number of instances
+		self.k = self.units[-1] # the numer of output units
+		self.D = np.zeros((self.theta.shape)) # the delta accumulator for gradient descent
 
 		# iterate through the data at most max_iter times, updating the theta for each feature
 		# also stop iterating if error is less than epsilon (convergence tolerance constant)
@@ -54,8 +55,12 @@ class NeuralNetClassifier():
 				# calculate the activation values
 				a = self.forward_prop(X[i])
 
+				# calculate the cost
+				h_x = a[:-(self.k + 1)] if self.k > 1 else a[-1] # the activation values on the output units
+				cost = self.compute_cost(y, h_x)
+
 				# back propagate the error
-				delta = self.back_prop(a)
+				delta = self.back_prop(X[i], y[i], a)
 			
 				# calculate Delta accumulations
 				self.D += np.dot(delta, a)
@@ -76,37 +81,90 @@ class NeuralNetClassifier():
 			
 			print iteration, ":", grad_mag
 
-	def forward_prop(self, x):
-		a = None
-		j = 1 # store current processing layer
-		i = 0 # store flattened theta array index value from previous calculation
-		for I,s in zip(self.indices, self.shapes):
-			print i, i + I, s[0], s[1]
-			theta_j = self.theta[i:i + I]
-			theta_j = theta_j.reshape(s[0], s[1])
-			i = I
-			print theta_j, theta_j.shape
+	def forward_prop(self, x_):
+		a = np.array(()) # store activation values for each hidden and output layer unit
 
-			# calc z value
-			# print x
-			z_j = np.dot(theta_j, x)
-			print z_j
-			a = self.get_activation(z_j)
+		# iterate through each layer in the network computing and forward propagating activation values
+		x = x_ # preserve original x
+		for theta_j in self.get_parameter_arrays(self.theta):
+			x = np.hstack((1, x)) # add bias unit value
+			a_ = self.compute_activation(np.dot(theta_j, x)) # the current layer's activation values
+			x = a_ # populate x with new "features" for next iteration of activation calcs
+			a = np.hstack((a, a_)) # record current layer activation values
+			print "a_:", a_
 			print "a:", a
-			x = np.array([1])
-			x = np.hstack((x, a))
-			# print x
-			# raise
+		return a
 
-			# raise
+	def get_parameter_arrays(self, param):
+		params = []
+		i = 0 # store flattened theta array index value from previous iteration
+		for j,s in zip(self.indices, self.shapes):
+			params.append(param[i:i + j].reshape(s[0], s[1])) # get current layers theta matrix
+			i = j # record the flattened array index for the end of current layer
+		return params
 
-	def back_prop(self, a):
-		pass
+	def get_activation_arrays(self, a_):
+		a = []
+		i = 0 # store flattened activation array index value from previous iteration
+		for j in self.units[1:]:
+			a.append(a_[i:i+j]) # append current activation layer values
+			i = j
+		return a
+
+	def back_prop(self, x, y, a_):
+		deltas = []
+		activations = self.get_activation_arrays(a_)
+		thetas = self.get_parameter_arrays(self.theta)
+		
+		# for at, t in zip(activations, thetas):
+		# 	print at
+		# 	print t
+		# 	print
+		# # raise
+		# print
+		# print y
+		# print activations[-1] - y
+		# raise
+		deltas = [activations[-1] - y] # delta 3
+		# iterate through layer activation values in reverse order to calulate delta_j
+		for i, params in enumerate(reversed(zip(activations[:-1], thetas[1:]))):
+			# deltas.append()
+			a, theta = params
+			print np.dot(theta.T, deltas[i]) * np.hstack((1, (a * (1 - a))))
+			deltas.append(np.dot(theta.T, deltas[i]) * np.hstack((1, (a * (1 - a))))) # delta 2
+
+		print
+		deltas.reverse()
+		big_deltas = self.get_parameter_arrays(self.D)
+		print "Deltas", big_deltas
+		print "thetas", thetas
+		print "deltas", deltas
+		activations.insert(0, x)
+		print "activations:", activations
+
+		D_ = np.array(())
+		for D, d, a in zip(big_deltas, deltas, activations):
+			print D
+			print np.hstack((1,a))[:, np.newaxis]
+			print d[1:]
+			D_tmp = D + d[1:, np.newaxis] * np.hstack((1,a))
+			print D_tmp
+			D_ = np.hstack((D_, D_tmp.flatten()))
+		print D_
+
+	def compute_cost(self, y, h_x):
+		# compute the cost function J(theta) using the regularization term lmbda
+		theta_sum = 0
+		for theta_j in self.get_parameter_arrays(self.theta):
+			theta_sum += (theta_j[:,1:] ** 2).sum()
+		reg = (self.lmbda / (2 * self.m)) * theta_sum
+
+		return 1.0/self.m * (np.dot(y, np.log(h_x)) + np.dot(1 - y, np.log(1 - h_x))).sum() + reg
 
 	def estimate_gradient(self):
 		pass
 
-	def get_activation(self, z):
+	def compute_activation(self, z):
 		return 1.0 / (1 + np.exp(- z))
 
 	def get_proba(self, X):
@@ -148,7 +206,7 @@ class NeuralNetClassifier():
 					mf.write('%s %f\n' % (features[i-1], self.theta[i]))
 
 
-def load_csv(data, features=False):
+def load_csv(data):
 	"""
 	Loads the csv files into numpy arrays.
 	@parameters: data The data file in csv format to be loaded
@@ -158,38 +216,29 @@ def load_csv(data, features=False):
 			  y - numpy array of labels
 	"""
 	print "Loading data from", data
-
-	# first create attribute names tuple and labels array
-	if features:
-		with open(data, 'rb') as csv_file:
-			reader = csv.reader(csv_file)
-			feature_names = list(reader.next())
-			feature_names.pop() # remove the 'class' feature name
-	else:
-		feature_names = None
-
-	# load the csv data into a numpy array
-	X = np.loadtxt(data, delimiter=",", dtype='float', skiprows=1)
+	X = np.loadtxt(data, delimiter=",", dtype='float')
 	y = X[:,-1:] # get only the labels
 	y = y.flatten() # make the single column 1 dimensional
-	y = y.astype(int)
+	# y = y.astype(int)
 	X = X[:,:-1] # remove the labels column from the data array
-	return feature_names, X, y
 
-def scale_features(X):
-	# scales all features in dataset X to values between 0.0 and 1.0
-	new_min, new_max = 0.0, 1.0
-	A_ = X.T
-	for i, column in enumerate(A_):
-		old_max = column.max()
-		old_min = column.min()
-		A_[i] = ((column - old_min) / (old_max - old_min + 0.000001) * (new_max - new_min)) + new_min
-	X = A_.T
+	return X, y
 
-	# vectorized implementation slightly off, still debugging...
-	# X_min, X_max = X.min(0), X.max(0)
-	# new_min, new_max = 0.0, 1.0
-	# X = (((X - X_min) / (X_max - X_min)) * (new_max - new_min)) + new_min
+def scale_features(X, new_min, new_max):
+	# scales all features in dataset X to values between new_min and new_max
+	X_min, X_max = X.min(0), X.max(0)
+	return (((X - X_min) / (X_max - X_min)) * (new_max - new_min + 0.000001)) + new_min
+
+def multiclass_format(y, c):
+	"""
+	Formats dataset labels y to a vector representation for multiclass classification.
+	i.e., If there are 3 classes {0,1,2}, then all instances of 0 are transformed to
+	[1,0,0], 1''s are tranformed to [0,1,0], and 2's become [0,0,1]
+	"""
+	y_ = np.zeros(shape=(len(y), c));
+	for i, lable in enumerate(y):
+		y_[i][lable] = 1.0
+	return y_
 
 def get_accuracy(y_test, y_pred):
 	"""
@@ -202,17 +251,17 @@ def get_accuracy(y_test, y_pred):
 	return float(correct) / y_test.size
 
 
-def main(train_file, test_file, layers=1, units=None, lmbda=0, max_iter=10000):
+def main(train_file, test_file, lmbda=0, layers=1, units=None, max_iter=10000):
 	"""
 	Manages files and operations for logistic regression model creation
 	"""
 	# open and load csv files
-	features, X_train, y_train = load_csv(train_file, True)
-	dummy, X_test, y_test = load_csv(test_file, True)
+	X_train, y_train = load_csv(train_file)
+	X_test, y_test = load_csv(test_file)
 
 	# scale features to encourage gradient descent convergence
-	scale_features(X_train)
-	scale_features(X_test)
+	scale_features(X_train, 0.0, 1.0)
+	scale_features(X_test, 0.0, 1.0)
 
 	# get units list
 	input_units = int(X_train.shape[1])
@@ -222,8 +271,25 @@ def main(train_file, test_file, layers=1, units=None, lmbda=0, max_iter=10000):
 	else:
 		units_.extend([int(u) for u in units.split('.')])
 
-	# binary classification for now
-	units_.append(1)
+	# calculate the number of output units
+	print y_train, y_test
+	train_clss = np.unique(y_train) # get the unique elements of the labels array
+	test_clss = np.unique(y_test)
+	train_clss.sort()
+	test_clss.sort()
+	if not np.array_equal(train_clss, test_clss): # verify that training and testing set labels match
+		print "Warning: Training and testing set labels do not agree."
+	
+	# record the number of output units
+	num_clss = len(train_clss)
+	if num_clss == 2:
+		units_.append(1)
+	else:
+		units_.append(num_clss) # record the number of output units
+
+		# format dataset labels to multiclass classification arrays
+		y_train = multiclass_format(y_train, num_clss)
+		y_test = multiclass_format(y_test, num_clss)
 
 	print layers, units_
 	# create the neural network classifier using the training data
