@@ -10,8 +10,7 @@ class NeuralNetClassifier():
 	This class is responsible for all neural network classifier operations.  These operations include
 	building a model from training data, class prediction for testing data, and printing the model.
 	"""
-	def __init__(self, layers, units, lmbda, alpha, max_iter):
-		self.layers = int(layers) # the number of hidden layers in the neural network
+	def __init__(self, units, lmbda, alpha, max_iter):
 		self.units = units # the number of units in each hidden layer
 		self.alpha = float(alpha) # learning rate for gradient descent
 		self.lmbda = float(lmbda) # regularization term
@@ -34,8 +33,7 @@ class NeuralNetClassifier():
 		# print self.theta, self.theta.shape
 
 	def __str__(self):
-		return "<Neural Network Classifier Instance: layers=" + str(self.layers) + \
-			   ", units=" + str(self.units) + ">\n"
+		return "<Neural Network Classifier Instance: units=" + str(self.units) + ">\n"
 
 	def fit(self, X, y):
 		"""
@@ -56,10 +54,6 @@ class NeuralNetClassifier():
 				# calculate the activation values
 				a, h_x = self.forward_prop(X[i])
 
-				# calculate the cost
-				# h_x = a[:-(self.k + 1)] if self.k > 1 else a[-1] # the activation values on the output units
-				# cost = self.compute_cost(y, h_x)
-
 				# back propagate the error
 				delta = self.back_prop(X[i], y[i], a)
 			
@@ -68,7 +62,8 @@ class NeuralNetClassifier():
 			# print self.D
 
 			# perform gradient checking
-			# grad_estimate = self.estimate_gradient()
+			# grad_estimate = self.estimate_gradient(X, y)
+			# print grad_estimate, np.linalg.norm(self.D)
 
 			# update theta parameters
 			self.theta -= self.alpha * self.D
@@ -156,17 +151,37 @@ class NeuralNetClassifier():
 		# print "FINAL D_", D_, D_.shape
 		return D_
 
-	def compute_cost(self, y, h_x):
+	def compute_cost(self, theta, X, y):
 		# compute the cost function J(theta) using the regularization term lmbda
 		theta_sum = 0
-		for theta_j in self.get_parameter_arrays(self.theta):
+		for theta_j in self.get_parameter_arrays(theta):
 			theta_sum += (theta_j[:,1:] ** 2).sum()
 		reg = (self.lmbda / (2 * self.m)) * theta_sum
 
-		return 1.0/self.m * (np.dot(y, np.log(h_x)) + np.dot(1 - y, np.log(1 - h_x))).sum() + reg
+		# print y, y.shape
+		# print np.log(h_x), np.log(h_x).shape
 
-	def estimate_gradient(self):
-		pass
+		m_sum = 0
+		for i, x in enumerate(X):
+			a, h_x = self.forward_prop(x)
+			m_sum += (np.dot(y[i], np.log(h_x)) + np.dot((1 - y[i]), np.log(1 - h_x))).sum()
+		return 1.0/self.m * m_sum + reg
+		# return 1.0/self.m * (np.dot(y[:, np.newaxis], np.log(h_x)) + np.dot((1 - y)[:, np.newaxis], np.log(1 - h_x))).sum() + reg
+
+	def estimate_gradient(self, X, y):
+		# def estimation_helper(theta, x, y):
+		# 	a, h_x = self.forward_prop(x)
+		# 	return self.compute_cost(theta, y, h_x)
+
+		epsilon = 0.0001
+
+		# calculate the cost of theta +/- epsilson
+		plus_cost = self.compute_cost(self.theta + epsilon, X, y)
+		minus_cost = self.compute_cost(self.theta - epsilon, X , y)
+		print plus_cost, minus_cost
+
+		# compute the slope estimate of the gradient
+		return (plus_cost - minus_cost) / (2 * epsilon)
 
 	def compute_activation(self, z):
 		return 1.0 / (1 + np.exp(- z))
@@ -258,9 +273,14 @@ def get_accuracy(y_test, y_pred):
 	return float(correct) / y_test.size
 
 
-def main(train_file, test_file, alpha=0.01, max_iter=10000, lmbda=0, layers=1, units=None):
+def main(train_file, test_file, alpha=0.01, max_iter=10000, lmbda=0, units=None):
 	"""
-	Manages files and operations for logistic regression model creation
+	Manages files and operations for the neural network model creation, training, and testing.
+	@parameters: alpha - the learning rate for gradient descent
+				 max_iter - the maximum number of iterations allowed for training
+				 lmbda - the regularization term
+				 units - a sequence of integers separated by '.' sunch that each integer
+				 represents the numer of units in a sequence of hidden layers.
 	"""
 	# open and load csv files
 	X_train, y_train = load_csv(train_file)
@@ -274,7 +294,7 @@ def main(train_file, test_file, alpha=0.01, max_iter=10000, lmbda=0, layers=1, u
 	input_units = int(X_train.shape[1])
 	units_ = [input_units]
 	if units is None:
-		units_.extend([2 * input_units] * int(layers))
+		units_.extend([2 * input_units])
 	else:
 		units_.extend([int(u) for u in units.split('.')])
 
@@ -299,7 +319,7 @@ def main(train_file, test_file, alpha=0.01, max_iter=10000, lmbda=0, layers=1, u
 		y_test = multiclass_format(y_test, num_clss)
 
 	# create the neural network classifier using the training data
-	NNC = NeuralNetClassifier(layers, units_, lmbda, alpha, max_iter)
+	NNC = NeuralNetClassifier(units_, lmbda, alpha, max_iter)
 	print "\nCreated a neural network classifier =", NNC
 
 	# fit the model to the loaded training data
