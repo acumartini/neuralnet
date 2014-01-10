@@ -54,7 +54,7 @@ class NeuralNetClassifier():
 			for i in xrange(self.m):
 				# calculate the activation values
 				a, h_x = self.forward_prop(X[i])
-				print i, a
+				# print i, self.delta.max()
 				# if str(a[0]) == 'nan':
 				# 	raise
 
@@ -63,7 +63,7 @@ class NeuralNetClassifier():
 			
 			# compute the partial derivative terms with regularization
 			D = (1.0/self.m * self.delta) + (self.lmbda * self.theta)
-			print D
+			# print D
 
 			# perform gradient checking
 			# grad_estimate = self.estimate_gradient(X, y)
@@ -71,11 +71,10 @@ class NeuralNetClassifier():
 
 			# update theta parameters
 			self.theta -= self.alpha * D
-			print self.theta
+			# print self.theta
 
 			# calculate the magnitude of the gradient and check for convergence
 			mag = np.linalg.norm(D)
-			print mag
 			if self.epsilon > mag:
 				break
 			
@@ -130,11 +129,8 @@ class NeuralNetClassifier():
 			# print
 			deltas.append(np.dot(theta.T, deltas[i]) * np.hstack((1, (a * (1 - a))))) # delta_j
 
-		# debugging backprop...
 		# print
 		deltas.reverse()
-		big_deltas = self.get_parameter_arrays(self.delta)
-		# print "big_deltas", big_deltas
 		# print "thetas", thetas
 		# print "deltas", deltas
 		activations.insert(0, x)
@@ -142,19 +138,16 @@ class NeuralNetClassifier():
 
 		deltas_ = np.array(())
 		layer = 1
-		for i, params in enumerate(zip(big_deltas, deltas, activations)):
-			D, d, a = params
-			# print D
-			# print np.hstack((1,a))
-			# print d
+		for i, params in enumerate(zip(deltas, activations)):
+			d, a = params
 			if layer != len(activations) - 1:
-				D_tmp = D + d[1:, np.newaxis] * np.hstack((1,a))
+				d_tmp = d[1:, np.newaxis] * np.hstack((1,a))
 			else:
-				D_tmp = D + d[:, np.newaxis] * np.hstack((1,a))
+				d_tmp = d[:, np.newaxis] * np.hstack((1,a))
+			deltas_ = np.hstack((deltas_, d_tmp.flatten()))
 			layer += 1
-			deltas_ = np.hstack((deltas_, D_tmp.flatten()))
-		# print
-		# print "FINAL D_", D_, D_.shape
+
+		# add backprob values to the delta accumulator
 		self.delta += deltas_
 
 	def compute_cost(self, theta, X, y):
@@ -307,8 +300,8 @@ def main(train_file, test_file, alpha=0.01, max_iter=10000, lmbda=0, units=None)
 	X_test, y_test = load_csv(test_file)
 
 	# scale features to encourage gradient descent convergence
-	scale_features(X_train, 0.0, 1.0)
-	scale_features(X_test, 0.0, 1.0)
+	X_train = scale_features(X_train, 0.0, 1.0)
+	X_test = scale_features(X_test, 0.0, 1.0)
 
 	# get units list
 	input_units = int(X_train.shape[1])
