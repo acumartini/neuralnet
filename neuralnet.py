@@ -17,6 +17,7 @@ class NeuralNetClassifier():
 		self.lmbda = float(lmbda) # regularization term
 		self.max_iter = int(max_iter) # the maximum number of iterations through the data before stopping
 		self.epsilon = 0.00001 # convergence measure
+		self.init_epsilon = 0.0001 # for random initialization of theta values
 		self.threshold = 0.5 # the class prediction threshold
 
 		# build network architecture by computing theta layer indices and shapes
@@ -30,7 +31,7 @@ class NeuralNetClassifier():
 		# print self.indices, self.shapes
 
 		# randomly initialize weights for flattened theta array
-		self.theta = np.random.rand(sum(self.indices)) - 0.5
+		self.theta = np.random.rand(sum(self.indices)) * (2 * self.init_epsilon) - self.init_epsilon
 		# print self.theta, self.theta.shape
 
 	def __str__(self):
@@ -63,6 +64,7 @@ class NeuralNetClassifier():
 			
 			# compute the partial derivative terms with regularization
 			D = (1.0/self.m * self.delta) + (self.lmbda * self.theta)
+			# D = 1.0/self.m * (self.delta + (self.lmbda * self.theta))
 			# print D
 
 			# perform gradient checking
