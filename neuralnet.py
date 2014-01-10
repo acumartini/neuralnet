@@ -4,6 +4,7 @@
 import sys
 import csv
 import numpy as np
+# np.seterr(all='raise')
 
 class NeuralNetClassifier():
 	"""
@@ -44,32 +45,37 @@ class NeuralNetClassifier():
 		self.n = X.shape[1] # the number of features
 		self.m = X.shape[0] # the number of instances
 		self.k = self.units[-1] # the numer of output units
-		self.D = np.zeros((self.theta.shape)) # the delta accumulator for gradient descent
 
 		# iterate through the data at most max_iter times, updating the theta for each feature
 		# also stop iterating if error is less than epsilon (convergence tolerance constant)
 		print "iter | magnitude of the gradient"
 		for iteration in xrange(self.max_iter):
+			self.delta = np.zeros((self.theta.shape)) # the delta accumulator for gradient descent
 			for i in xrange(self.m):
 				# calculate the activation values
 				a, h_x = self.forward_prop(X[i])
+				print i, a
+				# if str(a[0]) == 'nan':
+				# 	raise
 
 				# back propagate the error
-				delta = self.back_prop(X[i], y[i], a)
+				self.back_prop(X[i], y[i], a)
 			
 			# compute the partial derivative terms with regularization
-			self.D = (1.0/self.m * delta) + (self.lmbda * self.theta)
-			# print self.D
+			D = (1.0/self.m * self.delta) + (self.lmbda * self.theta)
+			print D
 
 			# perform gradient checking
 			# grad_estimate = self.estimate_gradient(X, y)
 			# print grad_estimate, np.linalg.norm(self.D)
 
 			# update theta parameters
-			self.theta -= self.alpha * self.D
+			self.theta -= self.alpha * D
+			print self.theta
 
 			# calculate the magnitude of the gradient and check for convergence
-			mag = np.linalg.norm(self.D)
+			mag = np.linalg.norm(D)
+			print mag
 			if self.epsilon > mag:
 				break
 			
@@ -127,14 +133,14 @@ class NeuralNetClassifier():
 		# debugging backprop...
 		# print
 		deltas.reverse()
-		big_deltas = self.get_parameter_arrays(self.D)
+		big_deltas = self.get_parameter_arrays(self.delta)
 		# print "big_deltas", big_deltas
 		# print "thetas", thetas
 		# print "deltas", deltas
 		activations.insert(0, x)
 		# print "activations:", activations
 
-		D_ = np.array(())
+		deltas_ = np.array(())
 		layer = 1
 		for i, params in enumerate(zip(big_deltas, deltas, activations)):
 			D, d, a = params
@@ -146,10 +152,10 @@ class NeuralNetClassifier():
 			else:
 				D_tmp = D + d[:, np.newaxis] * np.hstack((1,a))
 			layer += 1
-			D_ = np.hstack((D_, D_tmp.flatten()))
+			deltas_ = np.hstack((deltas_, D_tmp.flatten()))
 		# print
 		# print "FINAL D_", D_, D_.shape
-		return D_
+		self.delta += deltas_
 
 	def compute_cost(self, theta, X, y):
 		# compute the cost function J(theta) using the regularization term lmbda
@@ -184,7 +190,14 @@ class NeuralNetClassifier():
 		return (plus_cost - minus_cost) / (2 * epsilon)
 
 	def compute_activation(self, z):
+		for i, v in enumerate(z):
+			if v < -700:
+				z[i] = -700
 		return 1.0 / (1 + np.exp(- z))
+		# for i, v in enumerate(a):
+		# 	if float(v) == float('inf'):
+		# 		a[i] = 1.0
+		# return a
 
 	def get_proba(self, X):
 		return 1.0 / (1 + np.exp(- np.dot(X, self.theta)))
@@ -200,7 +213,10 @@ class NeuralNetClassifier():
 		proba = []
 		for x in X:
 			a, h_x = self.forward_prop(x)
-			proba.append(h_x[0])
+			if self.k < 2:
+				proba.append(h_x[0])
+			else:
+				proba.append(h_x)
 		return proba
 
 	def predict(self, X):
@@ -211,7 +227,11 @@ class NeuralNetClassifier():
 		@returns: y_pred - list of shape = [n_samples]
 				  The predicted class label for each instance.
 		"""
-		y_pred = [proba > self.threshold for proba in self.predict_proba(X)]
+		probas = self.predict_proba(X)
+		if self.k < 2:
+			y_pred = [proba > self.threshold for proba in probas]
+		else:
+			y_pred = [np.argmax(proba) for proba in probas]
 		return np.array(y_pred)
 
 	def add_ones(self, X):
@@ -299,7 +319,6 @@ def main(train_file, test_file, alpha=0.01, max_iter=10000, lmbda=0, units=None)
 		units_.extend([int(u) for u in units.split('.')])
 
 	# calculate the number of output units
-	print y_train, y_test
 	train_clss = np.unique(y_train) # get the unique elements of the labels array
 	test_clss = np.unique(y_test)
 	train_clss.sort()
@@ -316,7 +335,7 @@ def main(train_file, test_file, alpha=0.01, max_iter=10000, lmbda=0, units=None)
 
 		# format dataset labels to multiclass classification arrays
 		y_train = multiclass_format(y_train, num_clss)
-		y_test = multiclass_format(y_test, num_clss)
+		y_test_ = multiclass_format(y_test, num_clss)
 
 	# create the neural network classifier using the training data
 	NNC = NeuralNetClassifier(units_, lmbda, alpha, max_iter)
