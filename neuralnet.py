@@ -13,6 +13,7 @@ class NeuralNetClassifier():
 	"""
 	def __init__(self, units, lmbda, alpha, max_iter):
 		self.units = units # the number of units in each hidden layer
+		self.L = len(units) # the total number of layers including input and output layers
 		self.alpha = float(alpha) # learning rate for gradient descent
 		self.lmbda = float(lmbda) # regularization term
 		self.max_iter = int(max_iter) # the maximum number of iterations through the data before stopping
@@ -28,11 +29,9 @@ class NeuralNetClassifier():
 			j = self.units[i]
 			self.indices.append(j_ * (j + 1))
 			self.shapes.append((j_, j + 1))
-		# print self.indices, self.shapes
 
 		# randomly initialize weights for flattened theta array
 		self.theta = np.random.rand(sum(self.indices)) * (2 * self.init_epsilon) - self.init_epsilon
-		# print self.theta, self.theta.shape
 
 	def __str__(self):
 		return "<Neural Network Classifier Instance: units=" + str(self.units) + ">\n"
@@ -53,19 +52,20 @@ class NeuralNetClassifier():
 		for iteration in xrange(self.max_iter):
 			self.delta = np.zeros((self.theta.shape)) # the delta accumulator for gradient descent
 			for i in xrange(self.m):
+				# get theta parameter arrays for each layer
+				thetas = self.get_parameter_arrays(self.theta)
+
 				# calculate the activation values
-				a, h_x = self.forward_prop(X[i])
-				# print i, self.delta.max()
-				# if str(a[0]) == 'nan':
-				# 	raise
+				a, h_x = self.forward_prop(X[i], thetas)
 
 				# back propagate the error
-				self.back_prop(X[i], y[i], a)
+				self.back_prop(X[i], y[i], a, thetas)
 			
 			# compute the partial derivative terms with regularization
 			D = (1.0/self.m * self.delta) + (self.lmbda * self.theta)
 			# D = 1.0/self.m * (self.delta + (self.lmbda * self.theta))
 			# print D
+			# raise
 
 			# perform gradient checking
 			# grad_estimate = self.estimate_gradient(X, y)
@@ -82,12 +82,14 @@ class NeuralNetClassifier():
 			
 			print iteration, ":", mag
 
-	def forward_prop(self, x_):
+	def forward_prop(self, x_, thetas=None):
 		a = np.array(()) # store activation values for each hidden and output layer unit
 
 		# iterate through each layer in the network computing and forward propagating activation values
 		x = x_ # preserve original x
-		for theta_j in self.get_parameter_arrays(self.theta):
+		if thetas is None:
+			thetas = self.get_parameter_arrays(self.theta)
+		for theta_j in thetas:
 			x = np.hstack((1, x)) # add bias unit with value 1.0
 			a_ = self.compute_activation(np.dot(theta_j, x)) # the current layer's activation values
 			x = a_ # populate x with new "features" for next iteration of activation calcs
@@ -107,50 +109,125 @@ class NeuralNetClassifier():
 		i = 0 # store flattened activation array index value from previous iteration
 		for j in self.units[1:]:
 			a.append(a_[i:i+j]) # append current activation layer values
+			# a.append(a_[i:i+j][:, np.newaxis]) # append current activation layer values
 			i = j
 		return a
 
-	def back_prop(self, x, y, a_):
-		deltas = []
-		activations = self.get_activation_arrays(a_)
-		thetas = self.get_parameter_arrays(self.theta)
+	def back_prop(self, x, y, a_, thetas):
+		a = self.get_activation_arrays(a_)
+
+		# print "thetas"
+		# for t in thetas:
+		# 	print t	
+		# print "activations"
+		# for a__ in a:
+		# 	print a__
+		# print "y", y
+
+		d = [a[-1] - y] # delta_L
+		# iterate through layer activation values in reverse order computing d
+		for j in reversed(xrange(1, self.L - 1)):
+			# print "j", j
+			# print "a[j]", a[j]
+			# print "thetas[j].T", thetas[j].T
+			# print "d[0]", d[0]
+			# print "(a[j] * (1 - a[j]))", (a[j] * (1 - a[j]))
+			# print np.dot(thetas[j].T, d[0])
+
+			if j == self.L - 2:
+				a_tmp = a[j]
+			else:
+				a_tmp = np.hstack((1, a[j]))
+			# print np.dot(thetas[j].T, d[0])
+			# print (a_tmp * (1 - a_tmp))
+			d_tmp = (np.dot(thetas[j].T, d[0]) * (a_tmp * (1 - a_tmp)))[1:]
+			d.insert(0, d_tmp)
+			
+			# d.insert(0, np.dot(thetas[j].T, d[0]) * (a[j] * (1 - a[j])))
+			# if j == self.L - 2:
+			# 	# print "d[0]", d[0]
+			# 	# print np.dot(thetas[j].T, d[0])
+			# 	# print "(a[j] * (1 - a[j])", (a[j] * (1 - a[j]))
+			# 	# print "delta_j", np.dot(thetas[j].T, d[0]) * (a[j] * (1 - a[j]))
+				# d_tmp = (np.dot(thetas[j].T, d[0]) * (a[j] * (1 - a[j])))[1:]
+				# d.insert(0, d_tmp)
+			# else:
+			# 	# print "d[0][1:]", d[0][1:]
+			# 	# print np.dot(thetas[j].T, d[0][1:])
+			# 	# print "(a[j] * (1 - a[j])", np.hstack((1, (a[j] * (1 - a[j]))))
+			# 	# print "delta_j", np.dot(thetas[j].T, d[0][1:]) * np.hstack((1, (a[j] * (1 - a[j]))))
+				# a_tmp = np.hstack((1, a[j]))
+				# d.insert(0, np.dot(thetas[j].T, d[0][1:]) * (a_tmp * (1 - a_tmp)))
+			# deltas.insert(0, np.dot(thetas[j].T, deltas[0]) * np.hstack((1, (a[j] * (1 - a[j])))))
 		
-		# print activations[-1]
-		# print y
-		# print 
-		deltas = [activations[-1] - y] # delta_L
-		# iterate through layer activation values in reverse order to calulate delta_j
-		for i, params in enumerate(reversed(zip(activations[:-1], thetas[1:]))):
-			a, theta = params
-			# print "theta", theta
-			# print "delta[i]", deltas[i]
-			# print np.dot(theta.T, deltas[i])
-			# print "a", a
-			# print np.hstack((1, (a * (1 - a))))
-			# print np.dot(theta.T, deltas[i]) * np.hstack((1, (a * (1 - a))))
-			# print
-			deltas.append(np.dot(theta.T, deltas[i]) * np.hstack((1, (a * (1 - a))))) # delta_j
+		# print "d"
+		# for d__ in d:
+		# 	print d__
+		# raise
+
+		# for i, params in enumerate(reversed(zip(activations[:-1], thetas[1:]))):
+		# 	a, theta = params
+		# 	if i == 0:
+		# 		d_tmp = deltas[i]
+		# 	else:
+		# 		d_tmp = deltas[i][1:]
+				
+		# 	print "theta", theta
+		# 	print "deltas[i]", d_tmp
+		# 	# print np.dot(theta.T, deltas[i])
+		# 	print np.dot(theta.T, d_tmp)
+		# 	print "a", a
+		# 	print np.hstack((1, (a * (1 - a))))
+		# 	# print np.dot(theta.T, deltas[i]) * np.hstack((1, (a * (1 - a))))
+		# 	print np.dot(theta.T, d_tmp) * np.hstack((1, (a * (1 - a))))
+		# 	print
+		# 	deltas.append(np.dot(theta.T, deltas[i]) * np.hstack((1, (a * (1 - a))))) # delta_j
+		# 	deltas.append(np.dot(theta.T, d_tmp) * np.hstack((1, (a * (1 - a))))) # delta_j
 
 		# print
-		deltas.reverse()
+		# deltas.reverse()
 		# print "thetas", thetas
-		# print "deltas", deltas
-		activations.insert(0, x)
+
+		a.insert(0, x)
 		# print "activations:", activations
 
-		deltas_ = np.array(())
-		layer = 1
-		for i, params in enumerate(zip(deltas, activations)):
-			d, a = params
-			if layer != len(activations) - 1:
-				d_tmp = d[1:, np.newaxis] * np.hstack((1,a))
-			else:
-				d_tmp = d[:, np.newaxis] * np.hstack((1,a))
-			deltas_ = np.hstack((deltas_, d_tmp.flatten()))
-			layer += 1
+		delta = np.array(())
+		for l in xrange(1, self.L):
+			# print
+			# print "l", l
+			# print thetas[l-1]
+			# print "d[l-1]", d[l-1]
+			# print "d[l-1][1:]", d[l-1][1:]
+			# print "a[l-1]", a[l-1]
+			# print np.outer(d[l-1], np.hstack((1, a[l-1])))
+			delta_l =  np.outer(d[l-1], np.hstack((1, a[l-1])))
+			# print delta_l
+
+			# delta_l = np.dot(d[l-1], np.hstack((1, a[l-1]))[:, np.newaxis])
+			# if l == self.L - 1:
+				# print "np.outer(d[l-1], np.hstack((1, a[l-1]))", np.outer(d[l-1], np.hstack((1, a[l-1])))
+				# delta_l =  np.outer(d[l-1], np.hstack((1, a[l-1])))
+			# else:
+				# print "np.outer(d[l-1][1:], np.hstack((1, a[l-1]))", np.outer(d[l-1][1:], np.hstack((1, a[l-1])))
+				# delta_l =  np.outer(d[l-1][1:], np.hstack((1, a[l-1])))
+
+			delta = np.hstack((delta, delta_l.flatten()))
+
+		# raise
+		# layer = 1
+		# for i, params in enumerate(zip(deltas, a)):
+		# 	d, a = params
+		# 	if layer != len(activations) - 1:
+		# 		d_tmp = d[1:, np.newaxis] * np.hstack((1,a))
+		# 	else:
+		# 		d_tmp = d[:, np.newaxis] * np.hstack((1,a))
+		# 	delta = np.hstack((delta, d_tmp.flatten()))
+		# 	layer += 1
 
 		# add backprob values to the delta accumulator
-		self.delta += deltas_
+		# print delta
+		# raise
+		self.delta += delta
 
 	def compute_cost(self, theta, X, y):
 		# compute the cost function J(theta) using the regularization term lmbda
@@ -185,9 +262,9 @@ class NeuralNetClassifier():
 		return (plus_cost - minus_cost) / (2 * epsilon)
 
 	def compute_activation(self, z):
-		for i, v in enumerate(z):
-			if v < -700:
-				z[i] = -700
+		# for i, v in enumerate(z):
+		# 	if v < -700:
+		# 		z[i] = -700
 		return 1.0 / (1 + np.exp(- z))
 		# for i, v in enumerate(a):
 		# 	if float(v) == float('inf'):
@@ -255,8 +332,7 @@ def load_csv(data):
 	print "Loading data from", data
 	X = np.loadtxt(data, delimiter=",", dtype='float')
 	y = X[:,-1:] # get only the labels
-	y = y.flatten() # make the single column 1 dimensional
-	# y = y.astype(int)
+	# y = y.flatten() # make the single column 1 dimensional
 	X = X[:,:-1] # remove the labels column from the data array
 
 	return X, y
