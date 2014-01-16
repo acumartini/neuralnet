@@ -22,17 +22,17 @@ class NeuralNetClassifier():
 		self.init_epsilon = 0.0001 # for random initialization of theta values
 		self.threshold = 0.5 # the class prediction threshold
 
-		# build network architecture by computing theta layer indices and shapes
-		self.indices = [] # store theta layer divisions in the flattened theta array
+		# build network architecture by computing theta layer sizes and shapes
+		self.sizes = [] # store theta layer divisions in the flattened theta array
 		self.shapes = [] # store theta layer shapes for reshaping
 		for i in xrange(len(self.units)-1):
 			j_ = self.units[i+1]
 			j = self.units[i]
-			self.indices.append(j_ * (j + 1))
+			self.sizes.append(j_ * (j + 1))
 			self.shapes.append((j_, j + 1))
 
 		# randomly initialize weights for flattened theta array
-		self.theta = np.random.rand(sum(self.indices)) * (2 * self.init_epsilon) - self.init_epsilon
+		self.theta = np.random.rand(sum(self.sizes)) * (2 * self.init_epsilon) - self.init_epsilon
 
 	def __str__(self):
 		return "<Neural Network Classifier Instance: units=" + str(self.units) + ">\n"
@@ -188,17 +188,26 @@ class NeuralNetClassifier():
 	def unpack_parameters(self, param):
 		params = []
 		i = 0 # store flattened theta array index value from previous iteration
-		for j,s in zip(self.indices, self.shapes):
-			params.append(param[i:i + j].reshape(s[0], s[1])) # get current layers theta matrix
+		# print param
+		# print self.sizes, self.shapes
+		for j,s in zip(self.sizes, self.shapes):
+			# print param[i:i+j].reshape(s[0], s[1])
+			params.append(param[i:i+j].reshape(s[0], s[1])) # get current layers theta matrix
 			i += j # record the flattened array index for the end of current layer
+		# raise
 		return params
 
 	def unpack_activations(self, a_):
 		a = []
 		i = 0 # store flattened activation array index value from previous iteration
+		# print a_
+		# print self.units[1:]
 		for j in self.units[1:]:
+			# print a_[i:i+j]
 			a.append(a_[i:i+j]) # append current activation layer values
-			i = j
+			i += j
+		# print a
+		# raise
 		return a
 
 	def get_proba(self, X):
