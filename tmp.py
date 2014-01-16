@@ -5,7 +5,6 @@ import sys
 import csv
 import numpy as np
 # np.seterr(all='raise')
-import mlutils as mlu
 
 class NeuralNetClassifier():
 	"""
@@ -54,7 +53,7 @@ class NeuralNetClassifier():
 			self.delta = np.zeros((self.theta.shape)) # the delta accumulator for gradient descent
 			for i in xrange(self.m):
 				# get theta parameter arrays for each layer
-				thetas = self.unpack_parameters(self.theta)
+				thetas = self.get_parameter_arrays(self.theta)
 
 				# calculate the activation values
 				a, h_x = self.forward_prop(X[i], thetas)
@@ -63,23 +62,15 @@ class NeuralNetClassifier():
 				self.back_prop(X[i], y[i], a, thetas)
 			
 			# compute the partial derivative terms with regularization
-			theta_reg = np.array(())
-			for theta in thetas:
-				theta_j = np.copy(theta)
-				theta_j *= self.lmbda # regularize the entire parameter matrix
-				# remove regularization from theta_0 parameters
-				theta_j = np.hstack((np.zeros((theta_j.shape[0], 1)), theta_j[:,1:]))
-				theta_reg = np.hstack((theta_reg, theta_j.flatten()))
-
-			D = 1.0/self.m * (self.delta + theta_reg)
+			D = (1.0/self.m * self.delta) + (self.lmbda * self.theta)
+			# D = 1.0/self.m * (self.delta + (self.lmbda * self.theta))
+			# print D
+			# raise
 
 			# perform gradient checking
-			grad_approx = self.estimate_gradient(X, y)
-			for i, ga in enumerate(grad_approx):
-				print i, D[i], ga
-			print
-			# raise
-			
+			# grad_estimate = self.estimate_gradient(X, y)
+			# print grad_estimate, np.linalg.norm(self.D)
+
 			# update theta parameters
 			self.theta -= self.alpha * D
 			# print self.theta
@@ -97,7 +88,7 @@ class NeuralNetClassifier():
 		# iterate through each layer in the network computing and forward propagating activation values
 		x = x_ # preserve original x
 		if thetas is None:
-			thetas = self.unpack_parameters(self.theta)
+			thetas = self.get_parameter_arrays(self.theta)
 		for theta_j in thetas:
 			x = np.hstack((1, x)) # add bias unit with value 1.0
 			a_ = self.compute_activation(np.dot(theta_j, x)) # the current layer's activation values
@@ -105,8 +96,25 @@ class NeuralNetClassifier():
 			a = np.hstack((a, a_)) # record current layer activation values
 		return a, a_
 
+	def get_parameter_arrays(self, param):
+		params = []
+		i = 0 # store flattened theta array index value from previous iteration
+		for j,s in zip(self.indices, self.shapes):
+			params.append(param[i:i + j].reshape(s[0], s[1])) # get current layers theta matrix
+			i = j # record the flattened array index for the end of current layer
+		return params
+
+	def get_activation_arrays(self, a_):
+		a = []
+		i = 0 # store flattened activation array index value from previous iteration
+		for j in self.units[1:]:
+			a.append(a_[i:i+j]) # append current activation layer values
+			# a.append(a_[i:i+j][:, np.newaxis]) # append current activation layer values
+			i = j
+		return a
+
 	def back_prop(self, x, y, a_, thetas):
-		a = self.unpack_activations(a_)
+		a = self.get_activation_arrays(a_)
 
 		# print "thetas"
 		# for t in thetas:
@@ -115,7 +123,7 @@ class NeuralNetClassifier():
 		# for a__ in a:
 		# 	print a__
 		# print "y", y
-		
+
 		d = [a[-1] - y] # delta_L
 		# iterate through layer activation values in reverse order computing d
 		for j in reversed(xrange(1, self.L - 1)):
@@ -123,17 +131,66 @@ class NeuralNetClassifier():
 			# print "a[j]", a[j]
 			# print "thetas[j].T", thetas[j].T
 			# print "d[0]", d[0]
-			# print "(a[j-1] * (1 - a[j-1]))", (a[j-1] * (1 - a[j-1]))
+			# print "(a[j] * (1 - a[j]))", (a[j] * (1 - a[j]))
 			# print np.dot(thetas[j].T, d[0])
-			a_tmp = np.hstack((1, a[j-1]))
-			# if j == self.L - 2:
-			# 	a_tmp = a[j]
-			# else:
-			# 	a_tmp = np.hstack((1, a[j]))
+
+			if j == self.L - 2:
+				a_tmp = a[j]
+			else:
+				a_tmp = np.hstack((1, a[j]))
+			# print np.dot(thetas[j].T, d[0])
+			# print (a_tmp * (1 - a_tmp))
 			d_tmp = (np.dot(thetas[j].T, d[0]) * (a_tmp * (1 - a_tmp)))[1:]
 			d.insert(0, d_tmp)
+			
+			# d.insert(0, np.dot(thetas[j].T, d[0]) * (a[j] * (1 - a[j])))
+			# if j == self.L - 2:
+			# 	# print "d[0]", d[0]
+			# 	# print np.dot(thetas[j].T, d[0])
+			# 	# print "(a[j] * (1 - a[j])", (a[j] * (1 - a[j]))
+			# 	# print "delta_j", np.dot(thetas[j].T, d[0]) * (a[j] * (1 - a[j]))
+				# d_tmp = (np.dot(thetas[j].T, d[0]) * (a[j] * (1 - a[j])))[1:]
+				# d.insert(0, d_tmp)
+			# else:
+			# 	# print "d[0][1:]", d[0][1:]
+			# 	# print np.dot(thetas[j].T, d[0][1:])
+			# 	# print "(a[j] * (1 - a[j])", np.hstack((1, (a[j] * (1 - a[j]))))
+			# 	# print "delta_j", np.dot(thetas[j].T, d[0][1:]) * np.hstack((1, (a[j] * (1 - a[j]))))
+				# a_tmp = np.hstack((1, a[j]))
+				# d.insert(0, np.dot(thetas[j].T, d[0][1:]) * (a_tmp * (1 - a_tmp)))
+			# deltas.insert(0, np.dot(thetas[j].T, deltas[0]) * np.hstack((1, (a[j] * (1 - a[j])))))
+		
+		# print "d"
+		# for d__ in d:
+		# 	print d__
+		# raise
+
+		# for i, params in enumerate(reversed(zip(activations[:-1], thetas[1:]))):
+		# 	a, theta = params
+		# 	if i == 0:
+		# 		d_tmp = deltas[i]
+		# 	else:
+		# 		d_tmp = deltas[i][1:]
+				
+		# 	print "theta", theta
+		# 	print "deltas[i]", d_tmp
+		# 	# print np.dot(theta.T, deltas[i])
+		# 	print np.dot(theta.T, d_tmp)
+		# 	print "a", a
+		# 	print np.hstack((1, (a * (1 - a))))
+		# 	# print np.dot(theta.T, deltas[i]) * np.hstack((1, (a * (1 - a))))
+		# 	print np.dot(theta.T, d_tmp) * np.hstack((1, (a * (1 - a))))
+		# 	print
+		# 	deltas.append(np.dot(theta.T, deltas[i]) * np.hstack((1, (a * (1 - a))))) # delta_j
+		# 	deltas.append(np.dot(theta.T, d_tmp) * np.hstack((1, (a * (1 - a))))) # delta_j
+
+		# print
+		# deltas.reverse()
+		# print "thetas", thetas
 
 		a.insert(0, x)
+		# print "activations:", activations
+
 		delta = np.array(())
 		for l in xrange(1, self.L):
 			# print
@@ -144,62 +201,75 @@ class NeuralNetClassifier():
 			# print "a[l-1]", a[l-1]
 			# print np.outer(d[l-1], np.hstack((1, a[l-1])))
 			delta_l =  np.outer(d[l-1], np.hstack((1, a[l-1])))
+			# print delta_l
+
+			# delta_l = np.dot(d[l-1], np.hstack((1, a[l-1]))[:, np.newaxis])
+			# if l == self.L - 1:
+				# print "np.outer(d[l-1], np.hstack((1, a[l-1]))", np.outer(d[l-1], np.hstack((1, a[l-1])))
+				# delta_l =  np.outer(d[l-1], np.hstack((1, a[l-1])))
+			# else:
+				# print "np.outer(d[l-1][1:], np.hstack((1, a[l-1]))", np.outer(d[l-1][1:], np.hstack((1, a[l-1])))
+				# delta_l =  np.outer(d[l-1][1:], np.hstack((1, a[l-1])))
+
 			delta = np.hstack((delta, delta_l.flatten()))
+
+		# raise
+		# layer = 1
+		# for i, params in enumerate(zip(deltas, a)):
+		# 	d, a = params
+		# 	if layer != len(activations) - 1:
+		# 		d_tmp = d[1:, np.newaxis] * np.hstack((1,a))
+		# 	else:
+		# 		d_tmp = d[:, np.newaxis] * np.hstack((1,a))
+		# 	delta = np.hstack((delta, d_tmp.flatten()))
+		# 	layer += 1
+
+		# add backprob values to the delta accumulator
+		# print delta
+		# raise
 		self.delta += delta
 
 	def compute_cost(self, theta, X, y):
 		# compute the cost function J(theta) using the regularization term lmbda
 		theta_sum = 0
-		thetas = self.unpack_parameters(theta)
-		for theta_j in thetas:
+		for theta_j in self.get_parameter_arrays(theta):
 			theta_sum += (theta_j[:,1:] ** 2).sum()
 		reg = (self.lmbda / (2 * self.m)) * theta_sum
 
-		cost_sum = 0
+		# print y, y.shape
+		# print np.log(h_x), np.log(h_x).shape
+
+		m_sum = 0
 		for i, x in enumerate(X):
-			a, h_x = self.forward_prop(x, thetas)
-			for k in xrange(self.k):
-				cost_sum += (np.dot(y[i][k], np.log(h_x[k])) + np.dot((1 - y[i][k]), np.log(1 - h_x[k]))).sum()
-		return ((- 1.0 / self.m) * cost_sum) + reg
+			a, h_x = self.forward_prop(x)
+			m_sum += (np.dot(y[i], np.log(h_x)) + np.dot((1 - y[i]), np.log(1 - h_x))).sum()
+		return 1.0/self.m * m_sum + reg
+		# return 1.0/self.m * (np.dot(y[:, np.newaxis], np.log(h_x)) + np.dot((1 - y)[:, np.newaxis], np.log(1 - h_x))).sum() + reg
 
 	def estimate_gradient(self, X, y):
-		epsilon = .0001 # the the one-sided distance from the actual theta parameter value
+		# def estimation_helper(theta, x, y):
+		# 	a, h_x = self.forward_prop(x)
+		# 	return self.compute_cost(theta, y, h_x)
 
-		# compute the derivative estimate with respect to each theta parameter
-		# grad_approx = np.copy(self.theta)
-		grad_approx = np.zeros(self.theta.shape)
-		for i in xrange(len(self.theta)):
-			# adjust the current theta parameter based on elpsilon
-			theta_plus = np.copy(self.theta)
-			theta_plus[i] += epsilon
-			theta_minus = np.copy(self.theta)
-			theta_minus[i] -= epsilon
+		epsilon = 0.0001
 
-			# compute the two-sided difference
-			cost_plus = self.compute_cost(theta_plus, X, y)
-			cost_minus = self.compute_cost(theta_minus, X, y)
-			grad_approx[i] = (cost_plus - cost_minus) / (2 * epsilon)
+		# calculate the cost of theta +/- epsilson
+		plus_cost = self.compute_cost(self.theta + epsilon, X, y)
+		minus_cost = self.compute_cost(self.theta - epsilon, X , y)
+		print plus_cost, minus_cost
 
-		return grad_approx
+		# compute the slope estimate of the gradient
+		return (plus_cost - minus_cost) / (2 * epsilon)
 
 	def compute_activation(self, z):
-		return np.divide(1.0 , (1 + np.exp(- z)))
-
-	def unpack_parameters(self, param):
-		params = []
-		i = 0 # store flattened theta array index value from previous iteration
-		for j,s in zip(self.indices, self.shapes):
-			params.append(param[i:i + j].reshape(s[0], s[1])) # get current layers theta matrix
-			i += j # record the flattened array index for the end of current layer
-		return params
-
-	def unpack_activations(self, a_):
-		a = []
-		i = 0 # store flattened activation array index value from previous iteration
-		for j in self.units[1:]:
-			a.append(a_[i:i+j]) # append current activation layer values
-			i = j
-		return a
+		# for i, v in enumerate(z):
+		# 	if v < -700:
+		# 		z[i] = -700
+		return 1.0 / (1 + np.exp(- z))
+		# for i, v in enumerate(a):
+		# 	if float(v) == float('inf'):
+		# 		a[i] = 1.0
+		# return a
 
 	def get_proba(self, X):
 		return 1.0 / (1 + np.exp(- np.dot(X, self.theta)))
@@ -236,6 +306,10 @@ class NeuralNetClassifier():
 			y_pred = [np.argmax(proba) for proba in probas]
 		return np.array(y_pred)
 
+	def add_ones(self, X):
+		# prepend a column of 1's to dataset X to enable theta_0 calculations
+		return np.hstack((np.zeros(shape=(X.shape[0],1), dtype='float') + 1, X))
+
 	# def print_model(self, features, model_file):
 	# 	# wite the parameter values corresponding to each feature to the given model file
 	# 	with open(model_file, 'w') as mf:
@@ -244,6 +318,50 @@ class NeuralNetClassifier():
 	# 				mf.write('%f\n' % (self.theta[i]))
 	# 			else:
 	# 				mf.write('%s %f\n' % (features[i-1], self.theta[i]))
+
+
+def load_csv(data):
+	"""
+	Loads the csv files into numpy arrays.
+	@parameters: data The data file in csv format to be loaded
+				 features True => the data file includes features as the first row 
+	@returns: feature_names - None if features == False, else a list of feature names
+			  X - numpy array of data instances with dtype=float
+			  y - numpy array of labels
+	"""
+	print "Loading data from", data
+	X = np.loadtxt(data, delimiter=",", dtype='float')
+	y = X[:,-1:] # get only the labels
+	# y = y.flatten() # make the single column 1 dimensional
+	X = X[:,:-1] # remove the labels column from the data array
+
+	return X, y
+
+def scale_features(X, new_min, new_max):
+	# scales all features in dataset X to values between new_min and new_max
+	X_min, X_max = X.min(0), X.max(0)
+	return (((X - X_min) / (X_max - X_min)) * (new_max - new_min + 0.000001)) + new_min
+
+def multiclass_format(y, c):
+	"""
+	Formats dataset labels y to a vector representation for multiclass classification.
+	i.e., If there are 3 classes {0,1,2}, then all instances of 0 are transformed to
+	[1,0,0], 1''s are tranformed to [0,1,0], and 2's become [0,0,1]
+	"""
+	y_ = np.zeros(shape=(len(y), c));
+	for i, lable in enumerate(y):
+		y_[i][lable] = 1.0
+	return y_
+
+def get_accuracy(y_test, y_pred):
+	"""
+	@returns: The precision of the classifier, (correct labels / instance count)
+	"""
+	correct = 0
+	for i, pred in enumerate(y_pred):
+		if int(pred) == y_test[i]:
+			correct += 1
+	return float(correct) / y_test.size
 
 
 def main(train_file, test_file, alpha=0.01, max_iter=10000, lmbda=0, units=None):
@@ -256,12 +374,12 @@ def main(train_file, test_file, alpha=0.01, max_iter=10000, lmbda=0, units=None)
 				 represents the numer of units in a sequence of hidden layers.
 	"""
 	# open and load csv files
-	X_train, y_train = mlu.load_csv(train_file)
-	X_test, y_test = mlu.load_csv(test_file)
+	X_train, y_train = load_csv(train_file)
+	X_test, y_test = load_csv(test_file)
 
 	# scale features to encourage gradient descent convergence
-	X_train = mlu.scale_features(X_train, 0.0, 1.0)
-	X_test = mlu.scale_features(X_test, 0.0, 1.0)
+	X_train = scale_features(X_train, 0.0, 1.0)
+	X_test = scale_features(X_test, 0.0, 1.0)
 
 	# get units list
 	input_units = int(X_train.shape[1])
@@ -287,8 +405,8 @@ def main(train_file, test_file, alpha=0.01, max_iter=10000, lmbda=0, units=None)
 		units_.append(num_clss) # record the number of output units
 
 		# format dataset labels to multiclass classification arrays
-		y_train = mlu.multiclass_format(y_train, num_clss)
-		y_test_ = mlu.multiclass_format(y_test, num_clss)
+		y_train = multiclass_format(y_train, num_clss)
+		y_test_ = multiclass_format(y_test, num_clss)
 
 	# create the neural network classifier using the training data
 	NNC = NeuralNetClassifier(units_, lmbda, alpha, max_iter)
@@ -307,7 +425,7 @@ def main(train_file, test_file, alpha=0.01, max_iter=10000, lmbda=0, units=None)
 	for prob in NNC.predict_proba(X_test):
 		print prob
 	# print simple precision metric to the console
-	print('Accuracy:  ' + str(mlu.compute_accuracy(y_test, y_pred)))
+	print('Accuracy:  ' + str(get_accuracy(y_test, y_pred)))
 	
 	# write the model to the model file
 	# NNC.print_model(features, model_file)
