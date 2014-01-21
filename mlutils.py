@@ -21,7 +21,6 @@ def load_csv(data, shuffle=False):
 		pass # TODO
 
 	y = X[:,-1:] # get only the labels
-	# y = y.flatten() # make the single column 1 dimensional
 	X = X[:,:-1] # remove the labels column from the data array
 
 	return X, y
