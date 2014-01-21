@@ -43,6 +43,9 @@ class NeuralNetClassifier():
 	def __str__(self):
 		return "<Neural Network Classifier Instance: units=" + str(self.units) + ">\n"
 
+	# =====================================================================================
+	# Optimization
+
 	def fit(self, X, y):
 		"""
 		This function optimizes the parameters for the neural network classification model from 
@@ -56,49 +59,28 @@ class NeuralNetClassifier():
 		return self.minimize(self.cost, self.theta, X, y, self.jac, self.gtol)
 
 	def minimize(self, cost, theta, X, y, jac, gtol):
+		costs = [] # store cost for plotting
 		mags = [] # store gradient magnitudes for plotting
 
 		# iterate through the data at most maxiter times, updating the theta for each feature
 		# also stop iterating if error is less than epsilon (convergence tolerance constant)
 		print "iter | batch | magnitude of the gradient"
 		for iteration in xrange(self.maxiter):
-
+			
 			# iterate through batches
 			batch_count = 0
-			for X_, y_, b in self.minibatch(X, y):
-				
-				# set the delta accumulator for gradient descent to 0
-				self.delta = np.zeros((self.theta.shape))
+			for X_, y_ in self.mini_batch(X, y):
+				# compute the cost
+				costs.append(self.cost(self.theta, X_, y_))
 
-				# iterate through instances and accumulate deltas
-				for i, x in enumerate(X_):
-					# get theta parameter arrays for each layer
-					thetas = self.unpack_parameters(self.theta)
-
-					# calculate the activation values
-					a, h_x = self.forward_prop(x, thetas)
-
-					# back propagate the error
-					self.back_prop(x, y_[i], a, thetas)
-				
-				# compute the partial derivative terms with regularization
-				theta_reg = np.array(())
-				for theta in thetas:
-					theta_j = np.copy(theta)
-					theta_j *= self.lmbda # regularize the entire parameter matrix
-					# remove regularization from theta_0 parameters
-					theta_j = np.hstack((np.zeros((theta_j.shape[0], 1)), theta_j[:,1:]))
-					theta_reg = np.hstack((theta_reg, theta_j.flatten()))
-
-				D = 1.0 / b * (self.delta + theta_reg)
+				# compute the gradient for current batch
+				D = self.jac(self.theta, X_, y_)
 
 				# perform gradient checking
 				# print
 				# grad_approx = self.estimate_gradient(X_, y_)
 				# for i, ga in enumerate(grad_approx):
 				# 	print i, D[i], ga
-				# if iteration == 10:
-				# 	raise
 
 				# update theta parameters
 				self.theta -= self.alpha * D
@@ -109,15 +91,15 @@ class NeuralNetClassifier():
 				if gtol > mag:
 					break
 				
-				print iteration, ":", batch_count, ":", mag
+				print "iteration", iteration, ":", batch_count, ":", mag
 				batch_count += 1
-		return mags
+		return costs, mags
 
-	def minibatch(self, X, y):
+	def mini_batch(self, X, y):
 		b = self.batch_size # var to clean up code
 
 		if b == -1 or b >= self.m: # batch process by default
-			yield (X, y, self.m)
+			yield (X, y)
 		else:
 			# test if the batch size requires a remainder yield
 			size = float(self.m) / b
@@ -127,18 +109,60 @@ class NeuralNetClassifier():
 			i = 0 # instance index
 			for j in xrange(int(math.floor(size))):
 				X_, y_ = X[i:i + b], y[i:i + b]
-				yield (X_, y_, b)
+				yield (X_, y_)
 				i += b
 
 			if final_batch: # yield the remaining instances
 				X_, y_ = X[i:], y[i:]
-				yield (X_, y_, X_.shape[0])
+				yield (X_, y_)
 
-	def cost(self):
-		pass
+	# =====================================================================================
+	# Cost Function and Gradient Computation
 
-	def jac(self):
-		pass
+	def cost(self, theta, X, y):
+		# compute the cost function J(theta) using the regularization term lmbda
+		m = X.shape[0]
+		theta_sum = 0
+		thetas = self.unpack_parameters(theta)
+		for theta_j in thetas:
+			theta_sum += (theta_j[:,1:] ** 2).sum()
+		reg = (self.lmbda / (2 * m)) * theta_sum
+
+		cost_sum = 0
+		for i, x in enumerate(X):
+			a, h_x = self.forward_prop(x, thetas)
+			for k in xrange(self.k):
+				cost_sum += (np.dot(y[i][k], np.log(h_x[k])) + np.dot((1 - y[i][k]), np.log(1 - h_x[k]))).sum()
+		return ((- 1.0 / m) * cost_sum) + reg
+
+	def jac(self, theta, X, y):
+		m = X.shape[0] # number of instances
+
+		# set the delta accumulator for gradient descent to 0
+		self.delta = np.zeros((theta.shape))
+
+		# iterate through instances and accumulate deltas
+		for i, x in enumerate(X):
+			# get theta parameter arrays for each layer
+			thetas = self.unpack_parameters(theta)
+
+			# calculate the activation values
+			a, h_x = self.forward_prop(x, thetas)
+
+			# back propagate the error
+			self.back_prop(x, y[i], a, thetas)
+		
+		# compute the partial derivative terms with regularization
+		theta_reg = np.array(())
+		for theta in thetas:
+			theta_j = np.copy(theta)
+			theta_j *= self.lmbda # regularize the entire parameter matrix
+			# remove regularization from theta_0 parameters
+			theta_j = np.hstack((np.zeros((theta_j.shape[0], 1)), theta_j[:,1:]))
+			theta_reg = np.hstack((theta_reg, theta_j.flatten()))
+
+		# normalize and regularize the delta accumulator to obtain the final gradient
+		return (1.0 / m) * (self.delta + theta_reg)
 
 	def forward_prop(self, x_, thetas=None):
 		a = np.array(()) # store activation values for each hidden and output layer unit
@@ -171,22 +195,6 @@ class NeuralNetClassifier():
 			delta = np.hstack((delta, delta_l.flatten()))
 		self.delta += delta
 
-	def cost(self, theta, X, y):
-		# compute the cost function J(theta) using the regularization term lmbda
-		m = X.shape[0]
-		theta_sum = 0
-		thetas = self.unpack_parameters(theta)
-		for theta_j in thetas:
-			theta_sum += (theta_j[:,1:] ** 2).sum()
-		reg = (self.lmbda / (2 * m)) * theta_sum
-
-		cost_sum = 0
-		for i, x in enumerate(X):
-			a, h_x = self.forward_prop(x, thetas)
-			for k in xrange(self.k):
-				cost_sum += (np.dot(y[i][k], np.log(h_x[k])) + np.dot((1 - y[i][k]), np.log(1 - h_x[k]))).sum()
-		return ((- 1.0 / m) * cost_sum) + reg
-
 	def estimate_gradient(self, X, y):
 		epsilon = .0001 # the the one-sided distance from the actual theta parameter value
 
@@ -205,6 +213,9 @@ class NeuralNetClassifier():
 			grad_approx[i] = (cost_plus - cost_minus) / (2 * epsilon)
 
 		return grad_approx
+
+	# =====================================================================================
+	# Model Architecture Utilities
 
 	def compute_activation(self, z):
 		return np.divide(1.0 , (1 + np.exp(- z)))
@@ -226,6 +237,9 @@ class NeuralNetClassifier():
 			a.append(a_[i:i+j]) # append current activation layer values
 			i += j
 		return a
+
+	# ======================================================================================
+	# Prediction
 
 	def get_proba(self, X):
 		return 1.0 / (1 + np.exp(- np.dot(X, self.theta)))
@@ -262,6 +276,9 @@ class NeuralNetClassifier():
 			y_pred = [np.argmax(proba) for proba in probas]
 		return np.array(y_pred)
 
+	# ==================================================================================
+	# Model Output
+
 	# def print_model(self, features, model_file):
 	# 	# wite the parameter values corresponding to each feature to the given model file
 	# 	with open(model_file, 'w') as mf:
@@ -281,6 +298,9 @@ def main(train_file, test_file, alpha=0.01, lmbda=0, maxiter=100, batch_size=-1,
 				 units - a sequence of integers separated by '.' sunch that each integer
 				 represents the numer of units in a sequence of hidden layers.
 	"""
+	### ============== Digits dataset from sklearn ===================== ###
+	# To use, comment out  the mlu.load_csv calls below
+
 	# from sklearn import datasets, svm, metrics
 	# # The digits dataset
 	# digits = datasets.load_digits()
@@ -288,7 +308,8 @@ def main(train_file, test_file, alpha=0.01, lmbda=0, maxiter=100, batch_size=-1,
 	# data = digits.images.reshape((n_samples, -1))
 	# X_train, y_train = data[:n_samples / 2], digits.target[:n_samples / 2]
 	# X_test, y_test = data[n_samples / 2:], digits.target[n_samples / 2:]
-	
+	### ================================================================== ###
+
 	# open and load csv files
 	X_train, y_train = mlu.load_csv(train_file)
 	X_test, y_test = mlu.load_csv(test_file)
@@ -334,7 +355,7 @@ def main(train_file, test_file, alpha=0.01, lmbda=0, maxiter=100, batch_size=-1,
 
 	# fit the model to the loaded training data
 	print "Fitting the training data...\n"
-	mags = NNC.fit(X_train, y_train)
+	costs, mags = NNC.fit(X_train, y_train)
 
 	# predict the results for the test data
 	print "Generating probability prediction for the test data...\n"
@@ -352,6 +373,14 @@ def main(train_file, test_file, alpha=0.01, lmbda=0, maxiter=100, batch_size=-1,
 
 	# plot convergence 
 	import pylab
+	pylab.xlabel('Iteration')
+	pylab.ylabel('Cost')
+	pylab.title('Costs')
+	pylab.plot(range(len(costs)), costs)
+	pylab.show()
+	pylab.xlabel('Iteration')
+	pylab.ylabel('Gradient')
+	pylab.title('Gradients')
 	pylab.plot(range(len(mags)), mags)
 	pylab.show()
 
