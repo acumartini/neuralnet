@@ -18,7 +18,15 @@ def load_csv(data, shuffle=False):
 
 	# randomize data
 	if shuffle:
-		pass # TODO
+		# get a random list of indices
+		rand_indices = np.arange(X.shape[0])
+		np.random.shuffle(rand_indices)
+
+		# build shuffled array
+		X_ = np.zeros(X.shape)
+		for i, index in enumerate(rand_indices):
+			X_[i] = X[index]
+		X = X_
 
 	y = X[:,-1:] # get only the labels
 	X = X[:,:-1] # remove the labels column from the data array

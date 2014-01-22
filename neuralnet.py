@@ -311,10 +311,10 @@ def main(train_file, test_file, alpha=0.01, lmbda=0, maxiter=100, batch_size=-1,
 	### ================================================================== ###
 
 	# open and load csv files
-	X_train, y_train = mlu.load_csv(train_file)
+	X_train, y_train = mlu.load_csv(train_file, True) # load and shuffle training set
 	X_test, y_test = mlu.load_csv(test_file)
 
-	# scale features to encourage gradient descent convergence
+	# perform feature scaling
 	X_train = mlu.scale_features(X_train, 0.0, 1.0)
 	X_test = mlu.scale_features(X_test, 0.0, 1.0)
 
