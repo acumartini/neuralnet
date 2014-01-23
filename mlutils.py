@@ -1,5 +1,5 @@
 # Adam Martini
-# Utilities for data preprocessing and classification evaluation.
+# Utilities for data preprocessing/management and classification evaluation.
 # mlutils.py
 
 import numpy as np
