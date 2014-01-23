@@ -1,37 +1,66 @@
 # Adam Martini
-# Utilities for data preprocessing and classification evaluation.
+# Utilities for data preprocessing/management and classification evaluation.
 # mlutils.py
 
 import numpy as np
+import h5py
 
 def load_csv(data, shuffle=False):
 	"""
 	Loads the csv files into numpy arrays.
 	@parameters: data The data file in csv format to be loaded
-				 shuffle True => shuffle data isntances to randomize
-	@returns: feature_names - None if features == False, else a list of feature names
-			  X - numpy array of data instances with dtype=float
+				 shuffle True => shuffle data instances to randomize
+	@returns: X - numpy array of data instances with dtype=float
 			  y - numpy array of labels
 	"""
 	print "Loading data from", data
-	X = np.loadtxt(data, delimiter=",", dtype='float')
+	dset = np.loadtxt(data, delimiter=",", dtype='float')
+	return shuffle_split(dset, shuffle)
 
+def saveh(dset, path):
+	"""
+	Stores the numpy data in h5 format.
+	@parameters: dset Dataset to store
+				 path The path to file (including the file name) to save h5 file to
+	"""
+	f = h5py.File(path, 'w')
+	f['dset'] = dset
+	f.close()
+
+def loadh(path, shuffle=False):
+	"""
+	Loads the h5 data into a numpy array.
+	@parameters: path The path to file (including the file name) to load data from
+				 shuffle True => shuffle data instances to randomize
+	@returns: X - numpy array of data instances with dtype=float
+			  y - numpy array of labels
+	"""
+	f = h5py.File(path,'r') 
+	data = f.get('dset') 
+	dset = numpy.array(data)
+	return shuffle_split(dset, shuffle)
+
+def shuffle_split(dset, shuffle):
 	# randomize data
 	if shuffle:
-		# get a random list of indices
-		rand_indices = np.arange(X.shape[0])
-		np.random.shuffle(rand_indices)
+		shuffle_data(dset)
 
-		# build shuffled array
-		X_ = np.zeros(X.shape)
-		for i, index in enumerate(rand_indices):
-			X_[i] = X[index]
-		X = X_
-
-	y = X[:,-1:] # get only the labels
-	X = X[:,:-1] # remove the labels column from the data array
+	# split instances and labels
+	y = dset[:,-1:] # get only the labels
+	X = dset[:,:-1] # remove the labels column from the data array
 
 	return X, y
+
+def shuffle_data(X):
+	# get a random list of indices
+	rand_indices = np.arange(X.shape[0])
+	np.random.shuffle(rand_indices)
+
+	# build shuffled array
+	X_ = np.zeros(X.shape)
+	for i, index in enumerate(rand_indices):
+		X_[i] = X[index]
+	X = X_
 
 def scale_features(X, new_min, new_max):
 	# scales all features in dataset X to values between new_min and new_max

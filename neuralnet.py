@@ -56,7 +56,13 @@ class NeuralNetClassifier():
 		self.m = X.shape[0] # the number of instances
 		self.k = self.units[-1] # the numer of output units
 
-		return self.minimize(self.cost, self.theta, X, y, self.jac, self.gtol)
+		# return self.minimize(self.cost, self.theta, X, y, self.jac, self.gtol)
+
+		# scipy advanced optimization
+		from scipy.optimize import minimize
+		minimize(self.cost, self.theta, method='L-BFGS', jac=self.jac, args=(X, y),
+				   options={'maxiter': self.maxiter, 'gtol': self.gtol, 'disp': True})
+
 
 	def minimize(self, cost, theta, X, y, jac, gtol):
 		costs = [] # store cost for plotting
