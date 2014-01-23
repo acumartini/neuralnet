@@ -13,7 +13,7 @@ def load_csv(data, shuffle=False):
 	@returns: X - numpy array of data instances with dtype=float
 			  y - numpy array of labels
 	"""
-	print "Loading data from", data
+	print("Loading data from", data)
 	dset = np.loadtxt(data, delimiter=",", dtype='float')
 	return shuffle_split(dset, shuffle)
 

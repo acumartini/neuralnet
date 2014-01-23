@@ -1,6 +1,19 @@
-# Adam Martini
-# Start Date: 1-7-14
-# Simple NN with batch optimization finshed: 1-15-14
+# title			  : neuralnet.py
+# author		  : Adam Martini
+# start_date	  : 1-7-14
+#
+# description	  : A vectorized implementation of an artificial neural network 
+#				    learning algorithm written in python using numpy. The final 
+#				    implementation of this project will support a variable number 
+#				    of hidden layers (of variable size), multiclass classification, 
+#				    advanced optimized methods using scipy (BFGS, CG), code optimizations 
+#				    using LLVM inferfaces, and options for unsupervised training of DBN's.
+#
+# usage           : python neuralnet.py <learning_rate> <regularization> <maxiter>
+#				    <batch_size> <hidden_layer_sizes>
+#				    (note: hidden layer sizes are separted by commas i.e., 10.10.10)
+# python_version  : 3.3.3
+#==============================================================================
 
 import sys
 import math
@@ -31,7 +44,7 @@ class NeuralNetClassifier():
 		# build network architecture by computing theta layer sizes and shapes
 		self.sizes = [] # store theta layer divisions in the flattened theta array
 		self.shapes = [] # store theta layer shapes for reshaping
-		for i in xrange(len(self.units)-1):
+		for i in range(len(self.units)-1):
 			j_ = self.units[i+1]
 			j = self.units[i]
 			self.sizes.append(j_ * (j + 1))
@@ -56,13 +69,13 @@ class NeuralNetClassifier():
 		self.m = X.shape[0] # the number of instances
 		self.k = self.units[-1] # the numer of output units
 
-		# return self.minimize(self.cost, self.theta, X, y, self.jac, self.gtol)
+		return self.minimize(self.cost, self.theta, X, y, self.jac, self.gtol)
 
-		# scipy advanced optimization
-		from scipy.optimize import minimize
-		minimize(self.cost, self.theta, method='L-BFGS', jac=self.jac, args=(X, y),
-				   options={'maxiter': self.maxiter, 'gtol': self.gtol, 'disp': True})
-
+		# # scipy advanced optimization
+		# print("Performing advanced optimization using scipy.")
+		# import scipy.optimize as opti
+		# self.theta = opti.fmin_bfgs(self.cost, self.theta, fprime=self.jac, args=(X_, y_), 
+		# 							maxiter=10, disp=True)
 
 	def minimize(self, cost, theta, X, y, jac, gtol):
 		costs = [] # store cost for plotting
@@ -70,9 +83,9 @@ class NeuralNetClassifier():
 
 		# iterate through the data at most maxiter times, updating the theta for each feature
 		# also stop iterating if error is less than epsilon (convergence tolerance constant)
-		print "iter | batch | magnitude of the gradient"
-		for iteration in xrange(self.maxiter):
-			
+		print("iter | batch | magnitude of the gradient")
+		for iteration in range(self.maxiter):
+
 			# iterate through batches
 			batch_count = 0
 			for X_, y_ in self.mini_batch(X, y):
@@ -86,7 +99,7 @@ class NeuralNetClassifier():
 				# print
 				# grad_approx = self.estimate_gradient(X_, y_)
 				# for i, ga in enumerate(grad_approx):
-				# 	print i, D[i], ga
+				#         print i, D[i], ga
 
 				# update theta parameters
 				self.theta -= self.alpha * D
@@ -95,9 +108,9 @@ class NeuralNetClassifier():
 				mag = np.linalg.norm(D)
 				mags.append(mag)
 				if gtol > mag:
-					break
-				
-				print "iteration", iteration, ":", batch_count, ":", mag
+				        break
+
+				print("iteration", iteration, ":", batch_count, ":", mag)
 				batch_count += 1
 		return costs, mags
 
@@ -113,7 +126,7 @@ class NeuralNetClassifier():
 
 			# iterate dataset and yield batches for gradient descent processing
 			i = 0 # instance index
-			for j in xrange(int(math.floor(size))):
+			for j in range(int(math.floor(size))):
 				X_, y_ = X[i:i + b], y[i:i + b]
 				yield (X_, y_)
 				i += b
@@ -137,7 +150,7 @@ class NeuralNetClassifier():
 		cost_sum = 0
 		for i, x in enumerate(X):
 			a, h_x = self.forward_prop(x, thetas)
-			for k in xrange(self.k):
+			for k in range(self.k):
 				cost_sum += (np.dot(y[i][k], np.log(h_x[k])) + np.dot((1 - y[i][k]), np.log(1 - h_x[k]))).sum()
 		return ((- 1.0 / m) * cost_sum) + reg
 
@@ -189,14 +202,14 @@ class NeuralNetClassifier():
 		
 		d = [a[-1] - y] # delta_L
 		# iterate through layer activation values in reverse order computing d
-		for j in reversed(xrange(1, self.L - 1)):
+		for j in reversed(range(1, self.L - 1)):
 			a_tmp = np.hstack((1, a[j-1]))
 			d_tmp = (np.dot(thetas[j].T, d[0]) * (a_tmp * (1 - a_tmp)))[1:]
 			d.insert(0, d_tmp)
 
 		a.insert(0, x)
 		delta = np.array(())
-		for l in xrange(1, self.L):
+		for l in range(1, self.L):
 			delta_l =  np.outer(d[l-1], np.hstack((1, a[l-1])))
 			delta = np.hstack((delta, delta_l.flatten()))
 		self.delta += delta
@@ -206,7 +219,7 @@ class NeuralNetClassifier():
 
 		# compute the derivative estimate with respect to each theta parameter
 		grad_approx = np.zeros(self.theta.shape)
-		for i in xrange(len(self.theta)):
+		for i in range(len(self.theta)):
 			# adjust the current theta parameter based on elpsilon
 			theta_plus = np.copy(self.theta)
 			theta_plus[i] += epsilon
@@ -230,7 +243,6 @@ class NeuralNetClassifier():
 		params = []
 		i = 0 # store flattened theta array index value from previous iteration
 		for j,s in zip(self.sizes, self.shapes):
-			# print param[i:i+j].reshape(s[0], s[1])
 			params.append(param[i:i+j].reshape(s[0], s[1])) # get current layers theta matrix
 			i += j # record the flattened array index for the end of current layer
 		return params
@@ -239,7 +251,6 @@ class NeuralNetClassifier():
 		a = []
 		i = 0 # store flattened activation array index value from previous iteration
 		for j in self.units[1:]:
-			# print a_[i:i+j]
 			a.append(a_[i:i+j]) # append current activation layer values
 			i += j
 		return a
@@ -288,7 +299,7 @@ class NeuralNetClassifier():
 	# def print_model(self, features, model_file):
 	# 	# wite the parameter values corresponding to each feature to the given model file
 	# 	with open(model_file, 'w') as mf:
-	# 		for i in xrange(self.n):
+	# 		for i in range(self.n):
 	# 			if i == 0:
 	# 				mf.write('%f\n' % (self.theta[i]))
 	# 			else:
@@ -338,7 +349,7 @@ def main(train_file, test_file, alpha=0.01, lmbda=0, maxiter=100, batch_size=-1,
 	train_clss.sort()
 	test_clss.sort()
 	if not np.array_equal(train_clss, test_clss): # verify that training and testing set labels match
-		print "Warning: Training and testing set labels do not agree."
+		print("Warning: Training and testing set labels do not agree.")
 	
 	# record the number of output units
 	num_clss = len(train_clss)
@@ -357,20 +368,21 @@ def main(train_file, test_file, alpha=0.01, lmbda=0, maxiter=100, batch_size=-1,
 
 	# create the neural network classifier using the training data
 	NNC = NeuralNetClassifier(units_, lmbda, alpha, maxiter, batch_size)
-	print "\nCreated a neural network classifier =", NNC
+	print("\nCreated a neural network classifier =", NNC)
 
 	# fit the model to the loaded training data
-	print "Fitting the training data...\n"
+	print("Fitting the training data...\n")
 	costs, mags = NNC.fit(X_train, y_train)
+	# NNC.fit(X_train, y_train)
 
 	# predict the results for the test data
-	print "Generating probability prediction for the test data...\n"
+	print("Generating probability prediction for the test data...\n")
 	y_pred = NNC.predict(X_test)
 
 	### print the classification results ###
-	print "The probabilities for each instance in the test set are:\n"
+	print("The probabilities for each instance in the test set are:\n")
 	for prob in NNC.predict_proba(X_test):
-		print prob
+		print(prob)
 	# print simple precision metric to the console
 	print('Accuracy:  ' + str(mlu.compute_accuracy(y_test, y_pred)))
 	
