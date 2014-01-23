@@ -1,6 +1,19 @@
-# Adam Martini
-# Start Date: 1-7-14
-# Simple NN with batch optimization finshed: 1-15-14
+# title			  : neuralnet.py
+# author		  : Adam Martini
+# start_date	  : 1-7-14
+#
+# description	  : A vectorized implementation of an artificial neural network 
+#				    learning algorithm written in python using numpy. The final 
+#				    implementation of this project will support a variable number 
+#				    of hidden layers (of variable size), multiclass classification, 
+#				    advanced optimized methods using scipy (BFGS, CG), code optimizations 
+#				    using LLVM inferfaces, and options for unsupervised training of DBN's.
+#
+# usage           : python neuralnet.py <learning_rate> <regularization> <maxiter>
+#				    <batch_size> <hidden_layer_sizes>
+#				    (note: hidden layer sizes are separted by commas i.e., 10.10.10)
+# python_version  : 3.3.3
+#==============================================================================
 
 import sys
 import math
