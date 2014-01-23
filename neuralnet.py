@@ -21,6 +21,8 @@ import csv
 import numpy as np
 # np.seterr(all='raise')
 import mlutils as mlu
+import time
+import timeit
 
 class NeuralNetClassifier():
 	"""
@@ -88,6 +90,7 @@ class NeuralNetClassifier():
 			mags_tmp = [] # tmp magnitudes to average for iteration output
 
 			# iterate through batches
+			# t = time.time()
 			batch_count = 0
 			for X_, y_ in self.mini_batch(X, y):
 				# compute the cost
