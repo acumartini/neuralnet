@@ -62,6 +62,11 @@ def shuffle_data(X):
 		X_[i] = X[index]
 	return X_
 
+def mean_normalize(X, std=False):
+	# normalize the mean to 0 for each feature and scale based on max/min values or
+	# the standard deviation according to paramter "std"
+	d = X.std(0) if std else X.max(0) - X.min(0)
+	return (X - X.mean(0)) / d
 
 def scale_features(X, new_min, new_max):
 	# scales all features in dataset X to values between new_min and new_max

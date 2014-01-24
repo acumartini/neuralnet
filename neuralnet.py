@@ -21,8 +21,6 @@ import csv
 import numpy as np
 # np.seterr(all='raise')
 import mlutils as mlu
-import time
-import timeit
 
 class NeuralNetClassifier():
 	"""
@@ -340,6 +338,8 @@ def main(train_file, test_file, alpha=0.01, lmbda=0, maxiter=100, batch_size=-1,
 	# perform feature scaling
 	X_train = mlu.scale_features(X_train, 0.0, 1.0)
 	X_test = mlu.scale_features(X_test, 0.0, 1.0)
+	# X_train = mlu.mean_normalize(X_train, True)
+	# X_test = mlu.mean_normalize(X_test, True)
 
 	# get units list
 	input_units = int(X_train.shape[1])
