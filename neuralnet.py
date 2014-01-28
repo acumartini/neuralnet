@@ -395,17 +395,17 @@ def main(train_file, test_file, alpha=0.01, lmbda=0, maxiter=100, batch_size=-1,
 	# NNC.print_model(features, model_file)
 
 	# plot convergence 
-	import pylab
-	pylab.xlabel('Iteration')
-	pylab.ylabel('Cost')
-	pylab.title('Costs')
-	pylab.plot(range(len(costs)), costs)
-	pylab.show()
-	pylab.xlabel('Iteration')
-	pylab.ylabel('Gradient')
-	pylab.title('Gradients')
-	pylab.plot(range(len(mags)), mags)
-	pylab.show()
+	# import pylab
+	# pylab.xlabel('Iteration')
+	# pylab.ylabel('Cost')
+	# pylab.title('Costs')
+	# pylab.plot(range(len(costs)), costs)
+	# pylab.show()
+	# pylab.xlabel('Iteration')
+	# pylab.ylabel('Gradient')
+	# pylab.title('Gradients')
+	# pylab.plot(range(len(mags)), mags)
+	# pylab.show()
 
 
 if __name__ == '__main__':
