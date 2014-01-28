@@ -1,6 +1,7 @@
 # Adam Martini
 # pca.py
 # A vectorized implementation of principal component analysis using numpy.
+# Implementation in progress...
 
 import numpy as np
 
