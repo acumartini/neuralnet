@@ -8,17 +8,17 @@ import mlutils as mlu
 
 class PCA():
 	def __init__(self, k=None, min_retained=0.99):
-		self.k = k # the number of principal components
+		self.k = 50 #k # the number of principal components
 		self.min_retained = min_retained # the percentage of variance retained
 
 	def __str__(self):
 		return "<Principal Component Analysis Instance>"
 
 	def fit(self, X):
-		print "X", X.shape
+		# print "X", X.shape
 		self.sigma = np.cov(X, rowvar=0)
 		# self.sigma = np.cov(X)
-		print "sigma", self.sigma.shape
+		# print "sigma", self.sigma.shape
 		self.U, s, V = np.linalg.svd(self.sigma)
 
 		# print self.U.shape
@@ -48,8 +48,8 @@ class PCA():
 		U_reduce = self.U[:,:self.k]
 		X_ = np.empty((X.shape[0], self.k))
 		for i, x in enumerate(X):
-			print U_reduce.T.shape
-			print x.shape
+			# print U_reduce.T.shape
+			# print x.shape
 			X_[i] = np.dot(U_reduce.T, x)
 		return X_
 
@@ -62,11 +62,8 @@ class PCA():
 def main(*data_files):
 	"""
 	Manages files and operations for the neural network model creation, training, and testing.
-	@parameters: alpha - the learning rate for gradient descent
-				 maxiter - the maximum number of iterations allowed for training
-				 lmbda - the regularization term
-				 units - a sequence of integers separated by '.' sunch that each integer
-				 represents the numer of units in a sequence of hidden layers.
+	@parameters: *data_files - a list of paths to files to compress.  It is assumed that each
+				 file has the same features.
 	"""
 	### ============== Digits dataset from sklearn ===================== ###
 	# To use, comment out the mlu.load_csv() calls below
@@ -85,38 +82,62 @@ def main(*data_files):
 	indices = [] # store indices to split data after compression
 	labels = [] # store the labels for each dataset
 
+	j = 0 # keep track of last index
 	for data_file in data_files:
 		# load data and append to processing set
-		X, y = mlu.load_csv(data_file, True) # load and shuffle training set
+		X, y = mlu.load_csv(data_file) # load and shuffle training set
+		print X.shape
+		print y.shape
 		if data is None:
 			data = X
 		else:
-			np.vstack((data, X))
+			print "VSTACK"
+			data = np.vstack((data, X))
 		# store reconstruction data
-		indices.append(X.shape[0])
+		indices.append(X.shape[0] + j)
+		j = X.shape[0]
 		labels.append(y)
+		s = ''
+		for x in X[0]:
+			s += str(x) + ' '
+		print s
+		print "y", y[0]
+		print "data.sahpe", data.shape
+	print indices
+	print
 
-	# create the neural network classifier using the training data
-	compressor = PCA()
-	print("\nCreated a principal component alalysis object =", compressor)
+	# # create the neural network classifier using the training data
+	# compressor = PCA()
+	# print("\nCreated a principal component alalysis object =", compressor)
 
-	# fit the model to the loaded training data
-	# print("X_train.shape", X_train.shape)
-	print("Fitting the model to the dataset...\n")
-	compressor.fit(data)
+	# # fit the model to the loaded training data
+	# # print("X_train.shape", X_train.shape)
+	# print("Fitting the model to the dataset...\n")
+	# compressor.fit(data)
 
-	# transform the data retaining 99% of tge variance
-	data = compressor.transform(data)
+	# # transform the data retaining 99% of tge variance
+	# data = compressor.transform(data)
 	
-	print("The final dataset...")
-	print("data.shape: ", data.shape)
-	# for d in data:
-	# 	print d
+	# print("The final dataset...")
+	# print("data.shape: ", data.shape)
+	# # for d in data:
+	# # 	print d
 	 	
 	# reconstruct datasets
 	data_final = []
+	j = 0
+	print "data.shape", data.shape
 	for i, y in zip(indices, labels):
-		d_tmp = np.hstack((data[:i,:], y))
+		print "y.shape", y.shape
+		print "i", i, "j", j
+		d_tmp = np.hstack((data[j:i,:], y))
+		j = i
+		print "d_tmp.shape", d_tmp.shape
+		s = ''
+		for d in d_tmp[0]:
+			s += str(d) + ' '
+		print s
+		print "y", y[0]
 		data_final.append(d_tmp)
 	 	
 	# save data to disk
