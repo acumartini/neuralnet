@@ -309,7 +309,7 @@ class NeuralNetClassifier():
 	# 				mf.write('%s %f\n' % (features[i-1], self.theta[i]))
 
 
-def main(train_file, test_file, alpha=0.01, lmbda=0, maxiter=100, batch_size=-1, units=None):
+def main(train_file, test_file, method="csv", alpha=0.01, lmbda=0, maxiter=100, batch_size=-1, units=None):
 	"""
 	Manages files and operations for the neural network model creation, training, and testing.
 	@parameters: alpha - the learning rate for gradient descent
@@ -319,7 +319,7 @@ def main(train_file, test_file, alpha=0.01, lmbda=0, maxiter=100, batch_size=-1,
 				 represents the numer of units in a sequence of hidden layers.
 	"""
 	### ============== Digits dataset from sklearn ===================== ###
-	# To use, comment out  the mlu.load_csv calls below
+	# To use, comment out the mlu.load_csv() calls below
 
 	# from sklearn import datasets, svm, metrics
 	# # The digits dataset
@@ -331,8 +331,15 @@ def main(train_file, test_file, alpha=0.01, lmbda=0, maxiter=100, batch_size=-1,
 	### ================================================================== ###
 
 	# open and load csv files
-	X_train, y_train = mlu.load_csv(train_file, True) # load and shuffle training set
-	X_test, y_test = mlu.load_csv(test_file)
+	if method == "csv":
+		X_train, y_train = mlu.load_csv(train_file, True) # load and shuffle training set
+		X_test, y_test = mlu.load_csv(test_file)
+	elif method == "hdf":
+		X_train, y_train = mlu.loadh(train_file, True) # load and shuffle training set
+		X_test, y_test = mlu.loadh(test_file)
+	else:
+		raise Exception("Dataset file type not recognized: acceptable formats are 'csv' and 'hfd'. \
+						 Specify method with second argument.")
 
 	# perform feature scaling
 	X_train = mlu.scale_features(X_train, 0.0, 1.0)
@@ -366,10 +373,6 @@ def main(train_file, test_file, alpha=0.01, lmbda=0, maxiter=100, batch_size=-1,
 		# format dataset labels to multiclass classification arrays
 		y_train = mlu.multiclass_format(y_train, num_clss)
 		y_test_ = mlu.multiclass_format(y_test, num_clss)
-
-	from sklearn import datasets, svm, metrics
-	# The digits dataset
-	digits = datasets.load_digits()
 
 	# create the neural network classifier using the training data
 	NNC = NeuralNetClassifier(units_, lmbda, alpha, maxiter, batch_size)
