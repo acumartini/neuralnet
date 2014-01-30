@@ -8,7 +8,7 @@ import mlutils as mlu
 
 class PCA():
 	def __init__(self, k=None, min_retained=0.99):
-		self.k = 50 #k # the number of principal components
+		self.k = k # the number of principal components
 		self.min_retained = min_retained # the percentage of variance retained
 
 	def __str__(self):
@@ -106,22 +106,22 @@ def main(*data_files):
 	print indices
 	print
 
-	# # create the neural network classifier using the training data
-	# compressor = PCA()
-	# print("\nCreated a principal component alalysis object =", compressor)
+	# create the neural network classifier using the training data
+	compressor = PCA()
+	print("\nCreated a principal component alalysis object =", compressor)
 
-	# # fit the model to the loaded training data
-	# # print("X_train.shape", X_train.shape)
-	# print("Fitting the model to the dataset...\n")
-	# compressor.fit(data)
+	# fit the model to the loaded training data
+	# print("X_train.shape", X_train.shape)
+	print("Fitting the model to the dataset...\n")
+	compressor.fit(data)
 
-	# # transform the data retaining 99% of tge variance
-	# data = compressor.transform(data)
+	# transform the data retaining 99% of tge variance
+	data = compressor.transform(data)
 	
-	# print("The final dataset...")
-	# print("data.shape: ", data.shape)
-	# # for d in data:
-	# # 	print d
+	print("The final dataset...")
+	print("data.shape: ", data.shape)
+	# for d in data:
+	# 	print d
 	 	
 	# reconstruct datasets
 	data_final = []
