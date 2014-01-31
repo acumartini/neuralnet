@@ -37,7 +37,7 @@ def loadh(path, shuffle=False):
 	"""
 	f = h5py.File(path,'r') 
 	data = f.get('dset') 
-	dset = numpy.array(data)
+	dset = np.array(data)
 	return shuffle_split(dset, shuffle)
 
 def shuffle_split(dset, shuffle):

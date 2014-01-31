@@ -7,9 +7,13 @@
 #	hidden layers (of variable size), multiclass classification, advanced optimized methods using scipy 
 #	(BFGS, CG), code optimizations using LLVM inferfaces, and options for unsupervised training of DBN's.
 #
-# usage : python neuralnet.py <learning_rate> <regularization> <maxiter>
-#	<batch_size> <hidden_layer_sizes>
-#	(note: hidden layer sizes are separted by commas i.e., 10.10.10)
+# usage : python neuralnet.py <traing_set> <testing_set> <file_type> <learning_rate> <regularization> 
+# 	<maxiter> <batch_size> <hidden_layer_sizes>
+# 	Usage Notes:
+#	- The training and testing set are assumed to have the same number of features.  The algorithm will
+#	automatically detect and handle multi-class classification problems.
+#	- The file type can be eith CSV or HDF, specied as "csv" and "hdf" respectively.
+#	- Hidden layer sizes must be separted by dashes i.e., "10-50-10".
 #
 # python_version  : 3.3.3
 #==============================================================================
@@ -299,6 +303,7 @@ class NeuralNetClassifier():
 	# ==================================================================================
 	# Model Output
 
+	# TODO
 	# def print_model(self, features, model_file):
 	# 	# wite the parameter values corresponding to each feature to the given model file
 	# 	with open(model_file, 'w') as mf:
@@ -309,7 +314,7 @@ class NeuralNetClassifier():
 	# 				mf.write('%s %f\n' % (features[i-1], self.theta[i]))
 
 
-def main(train_file, test_file, alpha=0.01, lmbda=0, maxiter=100, batch_size=-1, units=None):
+def main(train_file, test_file, method="csv", alpha=0.01, lmbda=0, maxiter=100, batch_size=-1, units=None):
 	"""
 	Manages files and operations for the neural network model creation, training, and testing.
 	@parameters: alpha - the learning rate for gradient descent
@@ -319,7 +324,7 @@ def main(train_file, test_file, alpha=0.01, lmbda=0, maxiter=100, batch_size=-1,
 				 represents the numer of units in a sequence of hidden layers.
 	"""
 	### ============== Digits dataset from sklearn ===================== ###
-	# To use, comment out  the mlu.load_csv calls below
+	# To use, comment out the mlu.load_csv() calls below
 
 	# from sklearn import datasets, svm, metrics
 	# # The digits dataset
@@ -331,14 +336,19 @@ def main(train_file, test_file, alpha=0.01, lmbda=0, maxiter=100, batch_size=-1,
 	### ================================================================== ###
 
 	# open and load csv files
-	X_train, y_train = mlu.load_csv(train_file, True) # load and shuffle training set
-	X_test, y_test = mlu.load_csv(test_file)
+	if method == "csv":
+		X_train, y_train = mlu.load_csv(train_file, True) # load and shuffle training set
+		X_test, y_test = mlu.load_csv(test_file)
+	elif method == "hdf":
+		X_train, y_train = mlu.loadh(train_file, True) # load and shuffle training set
+		X_test, y_test = mlu.loadh(test_file)
+	else:
+		raise Exception("Dataset file type not recognized: acceptable formats are 'csv' and 'hfd'. \
+						 Specify method with second argument.")
 
 	# perform feature scaling
 	X_train = mlu.scale_features(X_train, 0.0, 1.0)
 	X_test = mlu.scale_features(X_test, 0.0, 1.0)
-	# X_train = mlu.mean_normalize(X_train, True)
-	# X_test = mlu.mean_normalize(X_test, True)
 
 	# get units list
 	input_units = int(X_train.shape[1])
@@ -346,7 +356,7 @@ def main(train_file, test_file, alpha=0.01, lmbda=0, maxiter=100, batch_size=-1,
 	if units is None:
 		units_.extend([2 * input_units])
 	else:
-		units_.extend([int(u) for u in units.split('.')])
+		units_.extend([int(u) for u in units.split('-')])
 
 	# calculate the number of output units
 	train_clss = np.unique(y_train) # get the unique elements of the labels array
@@ -367,16 +377,11 @@ def main(train_file, test_file, alpha=0.01, lmbda=0, maxiter=100, batch_size=-1,
 		y_train = mlu.multiclass_format(y_train, num_clss)
 		y_test_ = mlu.multiclass_format(y_test, num_clss)
 
-	from sklearn import datasets, svm, metrics
-	# The digits dataset
-	digits = datasets.load_digits()
-
 	# create the neural network classifier using the training data
 	NNC = NeuralNetClassifier(units_, lmbda, alpha, maxiter, batch_size)
 	print("\nCreated a neural network classifier =", NNC)
 
 	# fit the model to the loaded training data
-	# print("X_train.shape", X_train.shape)
 	print("Fitting the training data...\n")
 	costs, mags = NNC.fit(X_train, y_train)
 
