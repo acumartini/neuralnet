@@ -7,9 +7,13 @@
 #	hidden layers (of variable size), multiclass classification, advanced optimized methods using scipy 
 #	(BFGS, CG), code optimizations using LLVM inferfaces, and options for unsupervised training of DBN's.
 #
-# usage : python neuralnet.py <learning_rate> <regularization> <maxiter>
-#	<batch_size> <hidden_layer_sizes>
-#	(note: hidden layer sizes are separted by commas i.e., 10.10.10)
+# usage : python neuralnet.py <traing_set> <testing_set> <file_type> <learning_rate> <regularization> 
+# 	<maxiter> <batch_size> <hidden_layer_sizes>
+# 	Usage Notes:
+#	- The training and testing set are assumed to have the same number of features.  The algorithm will
+#	automatically detect and handle multi-class classification problems.
+#	- The file type can be eith CSV or HDF, specied as "csv" and "hdf" respectively.
+#	- Hidden layer sizes must be separted by dashes i.e., "10-50-10".
 #
 # python_version  : 3.3.3
 #==============================================================================
@@ -299,6 +303,7 @@ class NeuralNetClassifier():
 	# ==================================================================================
 	# Model Output
 
+	# TODO
 	# def print_model(self, features, model_file):
 	# 	# wite the parameter values corresponding to each feature to the given model file
 	# 	with open(model_file, 'w') as mf:
@@ -344,8 +349,6 @@ def main(train_file, test_file, method="csv", alpha=0.01, lmbda=0, maxiter=100, 
 	# perform feature scaling
 	X_train = mlu.scale_features(X_train, 0.0, 1.0)
 	X_test = mlu.scale_features(X_test, 0.0, 1.0)
-	# X_train = mlu.mean_normalize(X_train, True)
-	# X_test = mlu.mean_normalize(X_test, True)
 
 	# get units list
 	input_units = int(X_train.shape[1])
@@ -353,7 +356,7 @@ def main(train_file, test_file, method="csv", alpha=0.01, lmbda=0, maxiter=100, 
 	if units is None:
 		units_.extend([2 * input_units])
 	else:
-		units_.extend([int(u) for u in units.split('.')])
+		units_.extend([int(u) for u in units.split('-')])
 
 	# calculate the number of output units
 	train_clss = np.unique(y_train) # get the unique elements of the labels array
@@ -379,7 +382,6 @@ def main(train_file, test_file, method="csv", alpha=0.01, lmbda=0, maxiter=100, 
 	print("\nCreated a neural network classifier =", NNC)
 
 	# fit the model to the loaded training data
-	# print("X_train.shape", X_train.shape)
 	print("Fitting the training data...\n")
 	costs, mags = NNC.fit(X_train, y_train)
 
