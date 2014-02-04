@@ -17,7 +17,7 @@ A vectorized implementation of an artificial neural network learning algorithm w
 <li>Break main() and minimize() methods into separate files to isolate NN class functionality.
   <ul>
 	  <li>COMPLETE: main() will become a generic process() method that is called from the command line with flexible argument passing via getopt.</li>
-	  <li>IN PROGRESS: minimize() will take arguments that specify a method of optimization</li>
+	  <li>COMPLETE: minimize() will take arguments that specify a method of optimization</li>
   </ul>
 </li>
 <li>Explore the LLVM interface through numba to increase speed.
