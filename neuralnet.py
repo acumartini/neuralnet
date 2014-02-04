@@ -12,7 +12,7 @@
 # 	Usage Notes:
 #	- The training and testing set are assumed to have the same number of features.  The algorithm will
 #	automatically detect and handle multi-class classification problems.
-#	- The file type can be eith CSV or HDF, specified as "csv" and "hdf" respectively.
+#	- The file type can be either CSV or HDF, specified as "csv" and "hdf" respectively.
 #	- Optimization method options are: "l-bfgs", "cg", None (standard gradient descent)
 #	- If the batch_size is set to -1, then batch optimization is used
 #	- Hidden layer sizes must be separated by dashes i.e., "10-50-10"
@@ -228,7 +228,7 @@ class NeuralNetClassifier():
 		for theta_j in thetas:
 			x = np.hstack((1, x)) # add bias unit with value 1.0
 			a_ = self.compute_activation(np.dot(theta_j, x)) # the current layer's activation values
-			x = a_ # populate x with new "features" for next iteration of activation calcs
+			x = a_ # populate x with new "features" for next iteration of activation calculations
 			a = np.hstack((a, a_)) # record current layer activation values
 		return a, a_
 
@@ -349,8 +349,8 @@ def main(train_file, test_file, load_method="csv", opti_method=None, maxiter=100
 	@parameters: alpha - the learning rate for gradient descent
 				 maxiter - the maximum number of iterations allowed for training
 				 lmbda - the regularization term
-				 units - a sequence of integers separated by '.' sunch that each integer
-				 represents the numer of units in a sequence of hidden layers.
+				 units - a sequence of integers separated by '.' such that each integer
+				 represents the number of units in a sequence of hidden layers.
 	"""
 	### ============== Digits dataset from sklearn ===================== ###
 	# To use, comment out the mlu.load_csv() calls below
@@ -390,7 +390,7 @@ def main(train_file, test_file, load_method="csv", opti_method=None, maxiter=100
 	# check optimization method input
 	if opti_method not in ["l-bfgs", "cg"]:
 		print("Optimization method error: valid methods are 'l-bfgs' and 'cg', using standard \
-			  gradient descent bby default.")
+			  gradient descent by default.")
 		opti_method = None
 
 	# calculate the number of output units
