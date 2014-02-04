@@ -77,8 +77,8 @@ class NeuralNetClassifier():
 		# # scipy advanced optimization
 		# print("Performing advanced optimization using scipy.")
 		# import scipy.optimize as opti
-		# self.theta = opti.fmin_bfgs(self.cost, self.theta, fprime=self.jac, args=(X_, y_), 
-		# 							maxiter=10, disp=True)
+		# self.theta = opti.fmin_l_bfgs_b(self.cost, self.theta, fprime=self.jac, args=(X, y), 
+		# 							maxiter=10, approx_grad=True, disp=True)
 
 	def minimize(self, cost, theta, X, y, jac, gtol):
 		costs = [] # store cost for plotting
