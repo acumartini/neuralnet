@@ -7,13 +7,15 @@
 #	hidden layers (of variable size), multiclass classification, advanced optimized methods using scipy 
 #	(BFGS, CG), code optimizations using LLVM inferfaces, and options for unsupervised training of DBN's.
 #
-# usage : python neuralnet.py <traing_set> <testing_set> <file_type> <learning_rate> <regularization> 
-# 	<maxiter> <batch_size> <hidden_layer_sizes>
+# usage : python neuralnet.py <traing_set> <testing_set> <file_type> <optimization_method> <maxiter> 
+# 	<batch_size> <hidden_layer_sizes> <regularization_term> <learning_rate> 
 # 	Usage Notes:
 #	- The training and testing set are assumed to have the same number of features.  The algorithm will
 #	automatically detect and handle multi-class classification problems.
 #	- The file type can be eith CSV or HDF, specied as "csv" and "hdf" respectively.
-#	- Hidden layer sizes must be separted by dashes i.e., "10-50-10".
+#	- Optimization method options are: "l-bfgs", "cg", None (standard gradient descent)
+#	- If the batch_size is set to -1, then batch optimization is used
+#	- Hidden layer sizes must be separted by dashes i.e., "10-50-10"
 #
 # python_version  : 3.3.3
 #==============================================================================
@@ -21,6 +23,7 @@
 import sys
 import math
 import csv
+import scipy.optimize as opti
 import numpy as np
 # np.seterr(all='raise')
 import mlutils as mlu
@@ -30,7 +33,7 @@ class NeuralNetClassifier():
 	This class is responsible for all neural network classifier operations.  These operations include
 	building a model from training data, class prediction for testing data, and printing the model.
 	"""
-	def __init__(self, units, lmbda, alpha, maxiter, batch_size):
+	def __init__(self, units, lmbda, alpha, maxiter, batch_size, method):
 		# user defined parameters
 		self.units = units # the number of units in each hidden layer
 		self.L = len(units) # the total number of layers including input and output layers
@@ -38,10 +41,11 @@ class NeuralNetClassifier():
 		self.lmbda = float(lmbda) # regularization term
 		self.maxiter = int(maxiter) # the maximum number of iterations through the data before stopping
 		self.batch_size = int(batch_size) # for batch updates during gradient descent
+		self.method = "Standard GD" if method is None else method # the method to use during optimization
 
 		# internal parameters
-		self.gtol = 0.00001 # convergence measure
-		self.init_epsilon = 0.0001 # for random initialization of theta values
+		self.gtol = 1e-7 # convergence measure
+		self.init_epsilon = 1e-4 # for random initialization of theta values
 		self.threshold = 0.5 # the class prediction threshold
 
 		# build network architecture by computing theta layer sizes and shapes
@@ -72,54 +76,78 @@ class NeuralNetClassifier():
 		self.m = X.shape[0] # the number of instances
 		self.k = self.units[-1] # the numer of output units
 
-		return self.minimize(self.cost, self.theta, X, y, self.jac, self.gtol)
+		# return self.minimize(self.cost, self.theta, X, y, self.jac, self.gtol)
+		self.theta = self.minimize(self.method, self.cost, self.theta, X, y, self.jac, self.gtol)
 
-		# # scipy advanced optimization
-		# print("Performing advanced optimization using scipy.")
-		# import scipy.optimize as opti
-		# self.theta = opti.fmin_l_bfgs_b(self.cost, self.theta, fprime=self.jac, args=(X, y), 
-		# 							maxiter=10, approx_grad=True, disp=True)
-
-	def minimize(self, cost, theta, X, y, jac, gtol):
+	def minimize(self, method, cost, theta, X, y, jac, gtol):
 		costs = [] # store cost for plotting
 		mags = [] # store gradient magnitudes for plotting
 
-		# iterate through the data at most maxiter times, updating the theta for each feature
-		# also stop iterating if error is less than epsilon (convergence tolerance constant)
-		print("iter | batch | magnitude of the gradient")
-		for iteration in range(self.maxiter):
-			mags_tmp = [] # tmp magnitudes to average for iteration output
+		# check if batch processing is requested for advanced optimization techniques
+		if self.batch_size == -1 and method == "l-bfgs":
+			# L-BFGS-b optimization
+			print("Performing batch optimizatiopn using L-BFGS-b.")
+			theta, f, d = opti.fmin_l_bfgs_b(cost, theta, fprime=jac, args=(X, y), factr=10.0, 
+				pgtol=1e-50, maxiter=self.maxiter, approx_grad=False, disp=1)
+		elif self.batch_size == -1 and method == "cg":
+			# conjugate gradient optimization
+			print("Performing batch optimizatiopn using CG.")
+			theta = opti.fmin_cg(cost, theta, fprime=jac, args=(X, y), 
+										gtol=gtol, maxiter=self.maxiter, disp=1)
+		else:
+			# minibatch process and/or standard gradient descent was requested
+			print("Performing minibatch optimization using", method)
 
-			# iterate through batches
-			# t = time.time()
-			batch_count = 0
-			for X_, y_ in self.mini_batch(X, y):
-				# compute the cost
-				costs.append(self.cost(self.theta, X_, y_))
+			# iterate through the data at most maxiter times, updating the theta for each feature
+			# also stop iterating if error is less than epsilon (convergence tolerance constant)
+			print("iter | batch | magnitude of the gradient")
+			for iteration in range(self.maxiter):
+				mags_tmp = [] # tmp magnitudes to average for iteration output
 
-				# compute the gradient for current batch
-				D = self.jac(self.theta, X_, y_)
+				# iterate through batches
+				batch_count = 0
+				for X_, y_ in self.mini_batch(X, y):
+					if method == "l-bfgs":
+						# L-BFGS-b optimization
+						theta, f, d = opti.fmin_l_bfgs_b(cost, theta, fprime=jac, args=(X_, y_), 
+										factr=10.0, pgtol=1e-50, maxiter=20, approx_grad=False)
+					elif method == "cg":
+						# conjugate gradient optimization
+						theta = opti.fmin_cg(cost, theta, fprime=jac, args=(X_, y_), 
+													gtol=gtol, maxiter=3)
+					else: 
+						# standard gradient descent
+						# compute the cost
+						costs.append(self.cost(theta, X_, y_))
 
-				# perform gradient checking
-				# print
-				# grad_approx = self.estimate_gradient(X_, y_)
-				# for i, ga in enumerate(grad_approx):
-				# 	print i, D[i], ga
+						# compute the gradient for current batch
+						D = self.jac(theta, X_, y_)
 
-				# update theta parameters
-				self.theta -= self.alpha * D
+						# perform gradient checking (testing only)
+						# print
+						# grad_approx = self.estimate_gradient(X_, y_)
+						# for i, ga in enumerate(grad_approx):
+						# 	print i, D[i], ga
 
-				# calculate the magnitude of the gradient and check for convergence
-				mag = np.linalg.norm(D)
-				mags.append(mag)
-				mags_tmp.append(mag)
-				if gtol > mag:
-					break
+						# update theta parameters
+						self.theta -= self.alpha * D
+
+						# calculate the magnitude of the gradient and check for convergence
+						mag = np.linalg.norm(D)
+						mags.append(mag)
+						mags_tmp.append(mag)
+						if gtol > mag:
+							break
+					
+					batch_count += 1
 				
-				# print("iteration", iteration, ":", batch_count, ":", mag)
-				batch_count += 1
-			print("iteration", iteration, ":", np.mean(mags_tmp))
-		return costs, mags
+				# output iteration number and avg magnitude of the gradient if appropriate
+				if len(mags_tmp) > 0:
+					print("iteration", iteration, ":", np.mean(mags_tmp))
+				else:
+					print("iteration", iteration)
+
+		return theta #, costs, mags
 
 	def mini_batch(self, X, y):
 		b = self.batch_size # var to clean up code
@@ -167,11 +195,11 @@ class NeuralNetClassifier():
 		# set the delta accumulator for gradient descent to 0
 		self.delta = np.zeros((theta.shape))
 
+		# get theta parameter arrays for each layer (dev note: used to be in for loop)
+		thetas = self.unpack_parameters(theta)
+
 		# iterate through instances and accumulate deltas
 		for i, x in enumerate(X):
-			# get theta parameter arrays for each layer
-			thetas = self.unpack_parameters(theta)
-
 			# calculate the activation values
 			a, h_x = self.forward_prop(x, thetas)
 
@@ -314,7 +342,8 @@ class NeuralNetClassifier():
 	# 				mf.write('%s %f\n' % (features[i-1], self.theta[i]))
 
 
-def main(train_file, test_file, method="csv", alpha=0.01, lmbda=0, maxiter=100, batch_size=-1, units=None):
+def main(train_file, test_file, load_method="csv", opti_method=None, maxiter=100, 
+		 batch_size=-1, units=None, lmbda=0, alpha=0.01):
 	"""
 	Manages files and operations for the neural network model creation, training, and testing.
 	@parameters: alpha - the learning rate for gradient descent
@@ -336,10 +365,10 @@ def main(train_file, test_file, method="csv", alpha=0.01, lmbda=0, maxiter=100, 
 	### ================================================================== ###
 
 	# open and load csv files
-	if method == "csv":
+	if load_method == "csv":
 		X_train, y_train = mlu.load_csv(train_file, True) # load and shuffle training set
 		X_test, y_test = mlu.load_csv(test_file)
-	elif method == "hdf":
+	elif load_method == "hdf":
 		X_train, y_train = mlu.loadh(train_file, True) # load and shuffle training set
 		X_test, y_test = mlu.loadh(test_file)
 	else:
@@ -357,6 +386,12 @@ def main(train_file, test_file, method="csv", alpha=0.01, lmbda=0, maxiter=100, 
 		units_.extend([2 * input_units])
 	else:
 		units_.extend([int(u) for u in units.split('-')])
+
+	# check optimization method input
+	if opti_method not in ["l-bfgs", "cg"]:
+		print("Optimization method error: valid methods are 'l-bfgs' and 'cg', using standard \
+			  gradient descent bby default.")
+		opti_method = None
 
 	# calculate the number of output units
 	train_clss = np.unique(y_train) # get the unique elements of the labels array
@@ -378,12 +413,13 @@ def main(train_file, test_file, method="csv", alpha=0.01, lmbda=0, maxiter=100, 
 		y_test_ = mlu.multiclass_format(y_test, num_clss)
 
 	# create the neural network classifier using the training data
-	NNC = NeuralNetClassifier(units_, lmbda, alpha, maxiter, batch_size)
+	NNC = NeuralNetClassifier(units_, lmbda, alpha, maxiter, batch_size, opti_method)
 	print("\nCreated a neural network classifier =", NNC)
 
 	# fit the model to the loaded training data
 	print("Fitting the training data...\n")
-	costs, mags = NNC.fit(X_train, y_train)
+	# costs, mags = NNC.fit(X_train, y_train)
+	NNC.fit(X_train, y_train)
 
 	# predict the results for the test data
 	print("Generating probability prediction for the test data...\n")
