@@ -43,10 +43,13 @@ class NeuralNetClassifier():
 		self.batch_size = int(batch_size) # for batch updates during gradient descent
 		self.method = "Standard GD" if method is None else method # the method to use during optimization
 
-		# internal parameters
+		# internal optimization parameters
 		self.gtol = 1e-7 # convergence measure
 		self.init_epsilon = 1e-4 # for random initialization of theta values
 		self.threshold = 0.5 # the class prediction threshold
+		self.alpha_schedule = 10 # numerator for SGD learning rate reduction
+		self.beta_schedule = 10 # denominator for SGD learning rate reduction
+		self.momentum = 0.95 # dictates the weight of the previous update for momentum calculation
 
 		# build network architecture by computing theta layer sizes and shapes
 		self.sizes = [] # store theta layer divisions in the flattened theta array
@@ -114,7 +117,7 @@ class NeuralNetClassifier():
 					elif method == "cg":
 						# conjugate gradient optimization
 						theta = opti.fmin_cg(cost, theta, fprime=jac, args=(X_, y_), 
-													gtol=gtol, maxiter=3)
+													gtol=1e-50, maxiter=3, disp=False)
 					else: 
 						# standard gradient descent
 						# compute the cost
