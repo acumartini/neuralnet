@@ -417,16 +417,16 @@ def main(train_file, test_file, load_method="csv", opti_method=None, maxiter=100
 	print("\nCreated a neural network classifier =", NNC)
 
 	# fit the model to the loaded training data
-	print("Fitting the training data...\n")
+	print("\nFitting the training data...")
 	# costs, mags = NNC.fit(X_train, y_train)
 	NNC.fit(X_train, y_train)
 
 	# predict the results for the test data
-	print("Generating probability prediction for the test data...\n")
+	print("\nGenerating probability prediction for the test data...")
 	y_pred = NNC.predict(X_test)
 
 	### print the classification results ###
-	print("The probabilities for each instance in the test set are:\n")
+	print("\nThe probabilities for each instance in the test set are:\n")
 	for prob in NNC.predict_proba(X_test):
 		print(prob)
 	# print simple precision metric to the console
