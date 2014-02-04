@@ -5,17 +5,17 @@
 # description : A vectorized implementation of an artificial neural network learning algorithm written 
 #	in python using numpy. The final implementation of this project will support a variable number  of 
 #	hidden layers (of variable size), multiclass classification, advanced optimized methods using scipy 
-#	(BFGS, CG), code optimizations using LLVM inferfaces, and options for unsupervised training of DBN's.
+#	(BFGS, CG), code optimizations using LLVM interfaces, and options for unsupervised training of DBN's.
 #
 # usage : python neuralnet.py <traing_set> <testing_set> <file_type> <optimization_method> <maxiter> 
 # 	<batch_size> <hidden_layer_sizes> <regularization_term> <learning_rate> 
 # 	Usage Notes:
 #	- The training and testing set are assumed to have the same number of features.  The algorithm will
 #	automatically detect and handle multi-class classification problems.
-#	- The file type can be eith CSV or HDF, specied as "csv" and "hdf" respectively.
+#	- The file type can be eith CSV or HDF, specified as "csv" and "hdf" respectively.
 #	- Optimization method options are: "l-bfgs", "cg", None (standard gradient descent)
 #	- If the batch_size is set to -1, then batch optimization is used
-#	- Hidden layer sizes must be separted by dashes i.e., "10-50-10"
+#	- Hidden layer sizes must be separated by dashes i.e., "10-50-10"
 #
 # python_version  : 3.3.3
 #==============================================================================
@@ -74,7 +74,7 @@ class NeuralNetClassifier():
 		"""
 		self.n = X.shape[1] # the number of features
 		self.m = X.shape[0] # the number of instances
-		self.k = self.units[-1] # the numer of output units
+		self.k = self.units[-1] # the number of output units
 
 		# return self.minimize(self.cost, self.theta, X, y, self.jac, self.gtol)
 		self.theta = self.minimize(self.method, self.cost, self.theta, X, y, self.jac, self.gtol)
@@ -86,12 +86,12 @@ class NeuralNetClassifier():
 		# check if batch processing is requested for advanced optimization techniques
 		if self.batch_size == -1 and method == "l-bfgs":
 			# L-BFGS-b optimization
-			print("Performing batch optimizatiopn using L-BFGS-b.")
+			print("Performing batch optimization using L-BFGS-b.")
 			theta, f, d = opti.fmin_l_bfgs_b(cost, theta, fprime=jac, args=(X, y), factr=10.0, 
 				pgtol=1e-50, maxiter=self.maxiter, approx_grad=False, disp=1)
 		elif self.batch_size == -1 and method == "cg":
 			# conjugate gradient optimization
-			print("Performing batch optimizatiopn using CG.")
+			print("Performing batch optimization using CG.")
 			theta = opti.fmin_cg(cost, theta, fprime=jac, args=(X, y), 
 										gtol=gtol, maxiter=self.maxiter, disp=1)
 		else:
@@ -255,7 +255,7 @@ class NeuralNetClassifier():
 		# compute the derivative estimate with respect to each theta parameter
 		grad_approx = np.zeros(self.theta.shape)
 		for i in range(len(self.theta)):
-			# adjust the current theta parameter based on elpsilon
+			# adjust the current theta parameter based on epsilon
 			theta_plus = np.copy(self.theta)
 			theta_plus[i] += epsilon
 			theta_minus = np.copy(self.theta)

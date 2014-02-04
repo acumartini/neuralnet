@@ -64,7 +64,7 @@ def shuffle_data(X):
 
 def mean_normalize(X, std=False):
 	# normalize the mean to 0 for each feature and scale based on max/min values or
-	# the standard deviation according to paramter "std"
+	# the standard deviation according to parameter "std"
 	d = X.std(0) if std else X.max(0) - X.min(0)
 	return (X - X.mean(0)) / d
 
@@ -77,7 +77,7 @@ def multiclass_format(y, c):
 	"""
 	Formats dataset labels y to a vector representation for multiclass classification.
 	i.e., If there are 3 classes {0,1,2}, then all instances of 0 are transformed to
-	[1,0,0], 1''s are tranformed to [0,1,0], and 2's become [0,0,1]
+	[1,0,0], 1''s are transformed to [0,1,0], and 2's become [0,0,1]
 	"""
 	y_ = np.zeros(shape=(len(y), c));
 	for i, lable in enumerate(y):

@@ -9,8 +9,8 @@ import mlutils as mlu
 
 class PCA():
 	"""
-	This class is responsible for all principal component anaysis functionality.  The can choose to set
-	the number of compenents, or that can be determined automatically based on the desired amount of
+	This class is responsible for all principal component analysis functionality.  The can choose to set
+	the number of components, or that can be determined automatically based on the desired amount of
 	retained variance.
 	"""
 	def __init__(self, k=None, min_retained=0.99):
@@ -22,7 +22,7 @@ class PCA():
 
 	def fit(self, X):
 		"""
-		Computed the principal component vectors for diminsionality reduction as well as the number
+		Computed the principal component vectors for dimensionality reduction as well as the number
 		of components needed to achieve the desired amount of retained variance (if k is not specified).
 		"""
 		self.sigma = np.cov(X, rowvar=0)
@@ -46,7 +46,7 @@ class PCA():
 
 	def transform(self, X):
 		"""
-		Reduces the dimentionality of dataset X based on the model and number of components.
+		Reduces the dimensionality of dataset X based on the model and number of components.
 		@parameters X - the dataset to reduce
 		@ returns - X_ - the dataset reduced to k components
 		"""
@@ -87,14 +87,14 @@ def main(*data_files):
 		j = X.shape[0]
 		labels.append(y)
 
-	# use sklearn's implemenation of PCA for now
+	# use sklearn's implementation of PCA for now
 	from sklearn.decomposition import PCA as PCAsk
 	
-	# fit dataset without compoenent restriction
+	# fit dataset without component restriction
 	pca = PCAsk()
 	pca.fit(data)
 
-	# determine the number of compenents required to retain 99% of the variance
+	# determine the number of components required to retain 99% of the variance
 	v_ratios = pca.explained_variance_ratio_
 	k = 0
 	variance = v_ratios[0]
@@ -103,25 +103,25 @@ def main(*data_files):
 		variance += v_ratios[k]
 	k += 1
 
-	# fit dataset again with compoenent restriction
+	# fit dataset again with component restriction
 	pca = PCAsk(n_components=50)
 	pca.fit(data)
 
-	# reduce dimentionality
+	# reduce dimensionality
 	print("Performing data reduction...")
 	data = pca.transform(data)
 
 	# My PCA class still requires development and debugging
 	# create the neural network classifier using the training data
 	# compressor = PCA()
-	# print("\nCreated a principal component alalysis object =", compressor)
+	# print("\nCreated a principal component analysis object =", compressor)
 
 	# # fit the model to the loaded training data
 	# # print("X_train.shape", X_train.shape)
 	# print("Fitting the model to the dataset...\n")
 	# compressor.fit(data)
 
-	# # transform the data retaining 99% of tge variance
+	# # transform the data retaining 99% of the variance
 	# data = compressor.transform(data)
 	 	
 	# reconstruct datasets

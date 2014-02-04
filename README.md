@@ -1,6 +1,6 @@
 # neuralnet.py
 
-A vectorized implementation of an artificial neural network learning algorithm written in python using numpy.  The final implementation of this project will support a variable number of hidden layers (of variable size), multiclass classification, advanced optimized methods using scipy (BFGS, CG), code optimizations using LLVM inferfaces, and options for unsupervised training of DBN's.
+A vectorized implementation of an artificial neural network learning algorithm written in python using numpy.  The final implementation of this project will support a variable number of hidden layers (of variable size), multiclass classification, advanced optimized methods using scipy (BFGS, CG), code optimizations using LLVM interfaces, and options for unsupervised training of DBN's.
 
 ## Current Work Objectives
 <ol>
@@ -16,12 +16,12 @@ A vectorized implementation of an artificial neural network learning algorithm w
 </li>
 <li>Break main() and minimize() methods into separate files to isolate NN class functionality.
   <ul>
-	  <li>COMPLETE: main() will become a generic process() method that is called from the command line with flexible argument passing via getopt.</li>
+	  <li>IN PROGRESS: main() will become a generic process() method that is called from the command line with flexible argument passing via getopt.</li>
 	  <li>COMPLETE: minimize() will take arguments that specify a method of optimization</li>
   </ul>
 </li>
 <li>Explore the LLVM interface through numba to increase speed.
-	<ul><li>ON HOLD: An in depth look into performance improvements for vectorized implemtation of numpy code
+	<ul><li>ON HOLD: An in depth look into performance improvements for vectorized implementation of numpy code
 	using numba show that while small speed increases may be possible, large increases are only possible if you
 	are able to avoid bottleneck array splitting procedures.  This would require a large code rewrite that may not
 	not be very rewarding as most of the computation time is spent in np.dot operations that are already highly
@@ -30,7 +30,7 @@ A vectorized implementation of an artificial neural network learning algorithm w
 </li>
 <li>Apply MapReduce parallelization by splitting summations over multiple cores (Python Pools).
 	<ul><li>HIGH PRIOIRTY: This is an important feature to add in terms of scalability.  There will be measurable
-	gains achieved if the implementation is written effeciently.</li></ul>
+	gains achieved if the implementation is written efficiently.</li></ul>
 </li>
 <li>Add pre-training of parameters for DBN's:
   <ul>
