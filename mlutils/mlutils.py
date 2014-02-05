@@ -5,6 +5,9 @@
 import numpy as np
 import h5py
 
+
+### DATA IO ###
+
 def load_csv(data, shuffle=False):
 	"""
 	Loads the csv files into numpy arrays.
@@ -62,6 +65,8 @@ def shuffle_data(X):
 		X_[i] = X[index]
 	return X_
 
+### DATA PREPROCESSING ###
+
 def mean_normalize(X, std=False):
 	# normalize the mean to 0 for each feature and scale based on max/min values or
 	# the standard deviation according to parameter "std"
@@ -84,6 +89,8 @@ def multiclass_format(y, c):
 		y_[i][int(lable)] = 1.0
 	return y_
 
+### RESULT METRICS ###
+
 def compute_accuracy(y_test, y_pred):
 	"""
 	@returns: The precision of the classifier, (correct labels / instance count)
@@ -93,3 +100,20 @@ def compute_accuracy(y_test, y_pred):
 		if int(pred) == y_test[i]:
 			correct += 1
 	return float(correct) / y_test.size
+
+def get_pos_precision(self, CM):
+		Tn, Fp = CM[0]
+		Fn, Tp = CM[1]
+		if Tp + Fp == 0:
+			return 0.0
+		return float(Tp) / (Tp + Fp)
+
+def get_pos_recall(self, CM):
+	Tn, Fp = CM[0]
+	Fn, Tp = CM[1]
+	if Tp + Fn == 0:
+		return 0.0
+	return float(Tp) / (Tp + Fn)
+
+def get_f_measure(self, P, R):
+	return ((1 + self.beta**2) * P * R) / (((self.beta**2) * P) + R)

@@ -104,7 +104,7 @@ def main(*data_files):
 	k += 1
 
 	# fit dataset again with component restriction
-	pca = PCAsk(n_components=50)
+	pca = PCAsk(n_components=k)
 	pca.fit(data)
 
 	# reduce dimensionality

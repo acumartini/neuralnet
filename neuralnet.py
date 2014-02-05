@@ -13,7 +13,7 @@
 #	- The training and testing set are assumed to have the same number of features.  The algorithm will
 #	automatically detect and handle multi-class classification problems.
 #	- The file type can be either CSV or HDF, specified as "csv" and "hdf" respectively.
-#	- Optimization method options are: "l-bfgs", "cg", None (standard gradient descent)
+#	- Optimization method options are: "l-bfgs", "cg", None (Stochastic Gradient Descent)
 #	- If the batch_size is set to -1, then batch optimization is used
 #	- Hidden layer sizes must be separated by dashes i.e., "10-50-10"
 #
@@ -26,30 +26,32 @@ import csv
 import scipy.optimize as opti
 import numpy as np
 # np.seterr(all='raise')
-import mlutils as mlu
+from mlutils import mlutils as mlu
 
 class NeuralNetClassifier():
 	"""
 	This class is responsible for all neural network classifier operations.  These operations include
 	building a model from training data, class prediction for testing data, and printing the model.
 	"""
-	def __init__(self, units, lmbda, alpha, maxiter, batch_size, method):
+	def __init__(self, method, maxiter, batch_size, units, lmbda, alpha, beta):
 		# user defined parameters
 		self.units = units # the number of units in each hidden layer
 		self.L = len(units) # the total number of layers including input and output layers
-		self.alpha = float(alpha) # learning rate for gradient descent
+		self.alpha = float(alpha) # numerator for learning rate calculation
+		self.beta = float(beta) # denominator for learning rate calculation
 		self.lmbda = float(lmbda) # regularization term
 		self.maxiter = int(maxiter) # the maximum number of iterations through the data before stopping
 		self.batch_size = int(batch_size) # for batch updates during gradient descent
-		self.method = "Standard GD" if method is None else method # the method to use during optimization
+		self.method = "SGD" if method is None else method # the method to use during optimization
 
 		# internal optimization parameters
 		self.gtol = 1e-7 # convergence measure
 		self.init_epsilon = 1e-4 # for random initialization of theta values
-		self.threshold = 0.5 # the class prediction threshold
-		self.alpha_schedule = 10 # numerator for SGD learning rate reduction
-		self.beta_schedule = 10 # denominator for SGD learning rate reduction
 		self.momentum = 0.95 # dictates the weight of the previous update for momentum calculation
+		self.momentum_decay = 0.95 # reduces the momentum effect with each iteration
+
+		# internal classification parameters
+		self.threshold = 0.5 # the class prediction threshold
 
 		# build network architecture by computing theta layer sizes and shapes
 		self.sizes = [] # store theta layer divisions in the flattened theta array
@@ -99,13 +101,20 @@ class NeuralNetClassifier():
 										gtol=gtol, maxiter=self.maxiter, disp=1)
 		else:
 			# minibatch process and/or standard gradient descent was requested
-			print("Performing minibatch optimization using", method)
+			print("Performing minibatch optimization using", method, "with batch size", self.batch_size)
+
+			# self.alpha = 1
 
 			# iterate through the data at most maxiter times, updating the theta for each feature
 			# also stop iterating if error is less than epsilon (convergence tolerance constant)
 			print("iter | batch | magnitude of the gradient")
 			for iteration in range(self.maxiter):
-				mags_tmp = [] # tmp magnitudes to average for iteration output
+				# compute learning rate
+				learning_rate = self.alpha / (self.beta + iteration)
+				print "learning rate", learning_rate
+
+				mags_tmp = [] # temporarily store magnitudes of each batch to calculate an average
+				step = 0 # stores last update value for momentum calculations
 
 				# iterate through batches
 				batch_count = 0
@@ -133,7 +142,15 @@ class NeuralNetClassifier():
 						# 	print i, D[i], ga
 
 						# update theta parameters
-						self.theta -= self.alpha * D
+						# self.theta -= self.alpha * D
+						self.theta -= learning_rate * D
+						# jump = self.momentum * step
+						# self.theta -= jump
+						# correction = learning_rate * D #self.alpha * D #
+						# self.theta -= correction
+						# step = jump + correction
+
+						
 
 						# calculate the magnitude of the gradient and check for convergence
 						mag = np.linalg.norm(D)
@@ -149,6 +166,10 @@ class NeuralNetClassifier():
 					print("iteration", iteration, ":", np.mean(mags_tmp))
 				else:
 					print("iteration", iteration)
+
+				# update momentum
+				# self.momentum = self.momentum_decay * self.momentum
+				# print "momentum", self.momentum
 
 		return theta #, costs, mags
 
@@ -346,7 +367,7 @@ class NeuralNetClassifier():
 
 
 def main(train_file, test_file, load_method="csv", opti_method=None, maxiter=100, 
-		 batch_size=-1, units=None, lmbda=0, alpha=0.01):
+		 batch_size=-1, units=None, lmbda=0, alpha=100, beta=1000):
 	"""
 	Manages files and operations for the neural network model creation, training, and testing.
 	@parameters: alpha - the learning rate for gradient descent
@@ -392,8 +413,8 @@ def main(train_file, test_file, load_method="csv", opti_method=None, maxiter=100
 
 	# check optimization method input
 	if opti_method not in ["l-bfgs", "cg"]:
-		print("Optimization method error: valid methods are 'l-bfgs' and 'cg', using standard \
-			  gradient descent by default.")
+		print("Optimization method error: valid methods are 'l-bfgs' and 'cg'. Using Stochastic \
+			  Gradient Descent by default.")
 		opti_method = None
 
 	# calculate the number of output units
@@ -416,7 +437,7 @@ def main(train_file, test_file, load_method="csv", opti_method=None, maxiter=100
 		y_test_ = mlu.multiclass_format(y_test, num_clss)
 
 	# create the neural network classifier using the training data
-	NNC = NeuralNetClassifier(units_, lmbda, alpha, maxiter, batch_size, opti_method)
+	NNC = NeuralNetClassifier(opti_method, maxiter, batch_size, units_, lmbda, alpha, beta)
 	print("\nCreated a neural network classifier =", NNC)
 
 	# fit the model to the loaded training data
