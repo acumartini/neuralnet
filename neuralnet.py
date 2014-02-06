@@ -47,8 +47,8 @@ class NeuralNetClassifier():
 		# internal optimization parameters
 		self.gtol = 1e-7 # convergence measure
 		self.init_epsilon = 1e-4 # for random initialization of theta values
-		self.momentum = 0.95 # dictates the weight of the previous update for momentum calculation
-		self.momentum_decay = 0.95 # reduces the momentum effect with each iteration
+		# self.momentum = 0.95 # dictates the weight of the previous update for momentum calculation
+		# self.momentum_decay = 0.95 # reduces the momentum effect with each iteration
 
 		# internal classification parameters
 		self.threshold = 0.5 # the class prediction threshold
@@ -107,11 +107,9 @@ class NeuralNetClassifier():
 
 			# iterate through the data at most maxiter times, updating the theta for each feature
 			# also stop iterating if error is less than epsilon (convergence tolerance constant)
-			print("iter | batch | magnitude of the gradient")
 			for iteration in range(self.maxiter):
 				# compute learning rate
 				learning_rate = self.alpha / (self.beta + iteration)
-				print "learning rate", learning_rate
 
 				mags_tmp = [] # temporarily store magnitudes of each batch to calculate an average
 				step = 0 # stores last update value for momentum calculations
@@ -127,8 +125,7 @@ class NeuralNetClassifier():
 						# conjugate gradient optimization
 						theta = opti.fmin_cg(cost, theta, fprime=jac, args=(X_, y_), 
 													gtol=1e-50, maxiter=3, disp=False)
-					else: 
-						# standard gradient descent
+					else: # Stochastic Gradient Descent
 						# compute the cost
 						costs.append(self.cost(theta, X_, y_))
 
@@ -142,15 +139,14 @@ class NeuralNetClassifier():
 						# 	print i, D[i], ga
 
 						# update theta parameters
-						# self.theta -= self.alpha * D
 						self.theta -= learning_rate * D
+						
+						# TODO: finish momentum implementation
 						# jump = self.momentum * step
 						# self.theta -= jump
-						# correction = learning_rate * D #self.alpha * D #
+						# correction = learning_rate * D
 						# self.theta -= correction
 						# step = jump + correction
-
-						
 
 						# calculate the magnitude of the gradient and check for convergence
 						mag = np.linalg.norm(D)
@@ -202,15 +198,20 @@ class NeuralNetClassifier():
 		m = X.shape[0]
 		theta_sum = 0
 		thetas = self.unpack_parameters(theta)
+
+		# compute regularization
 		for theta_j in thetas:
 			theta_sum += (theta_j[:,1:] ** 2).sum()
 		reg = (self.lmbda / (2 * m)) * theta_sum
 
+		# compute the sum of the error
 		cost_sum = 0
 		for i, x in enumerate(X):
 			a, h_x = self.forward_prop(x, thetas)
 			for k in range(self.k):
 				cost_sum += (np.dot(y[i][k], np.log(h_x[k])) + np.dot((1 - y[i][k]), np.log(1 - h_x[k]))).sum()
+
+		# normalize and add regularization
 		return ((- 1.0 / m) * cost_sum) + reg
 
 	def jac(self, theta, X, y):
@@ -257,20 +258,23 @@ class NeuralNetClassifier():
 		return a, a_
 
 	def back_prop(self, x, y, a_, thetas):
-		a = self.unpack_activations(a_)
-		
-		d = [a[-1] - y] # delta_L
-		# iterate through layer activation values in reverse order computing d
+		a = self.unpack_activations(a_) # activation values for each layer
+		d = [a[-1] - y] # delta_L (prediction error in output layer)
+
+		# iterate through layer activation values in reverse order computing delta_l
 		for j in reversed(range(1, self.L - 1)):
 			a_tmp = np.hstack((1, a[j-1]))
 			d_tmp = (np.dot(thetas[j].T, d[0]) * (a_tmp * (1 - a_tmp)))[1:]
 			d.insert(0, d_tmp)
 
+		# use delta_l from each layer to back-propagate output layer error
 		a.insert(0, x)
 		delta = np.array(())
 		for l in range(1, self.L):
 			delta_l =  np.outer(d[l-1], np.hstack((1, a[l-1])))
 			delta = np.hstack((delta, delta_l.flatten()))
+
+		# add the gradient update of the current instance to the delta accumulator
 		self.delta += delta
 
 	def estimate_gradient(self, X, y):
@@ -352,6 +356,13 @@ class NeuralNetClassifier():
 			y_pred = [np.argmax(proba) for proba in probas]
 		return np.array(y_pred)
 
+	def get_cost(self, X, y):
+		"""
+		Returns the output of the cost function for the data instances and labels (X, y)
+		given the model's current parameter values.
+		"""
+		return self.cost(self.theta, X, y)
+
 	# ==================================================================================
 	# Model Output
 
@@ -370,24 +381,17 @@ def main(train_file, test_file, load_method="csv", opti_method=None, maxiter=100
 		 batch_size=-1, units=None, lmbda=0, alpha=100, beta=1000):
 	"""
 	Manages files and operations for the neural network model creation, training, and testing.
-	@parameters: alpha - the learning rate for gradient descent
+	@parameters: load_method - the dataset file format, either "csv" or "hdf"
+				 opti_method - specifies the optimization method to use, "l-bfgs", "cg", or
+				 			   None (defaults to SGD)
 				 maxiter - the maximum number of iterations allowed for training
+				 batch_size - the number of instance for each minibatch, -1 implies batch processing
+				 units - a sequence of integers separated by '.' such that each integer represents 
+				 		 the number of units in a sequence of hidden layers.
 				 lmbda - the regularization term
-				 units - a sequence of integers separated by '.' such that each integer
-				 represents the number of units in a sequence of hidden layers.
+				 alpha - the numerator for the learning rate schedule (relevant for SGD only)
+				 beta - the denominator for the learning rate schedule (relevant for SGD only)
 	"""
-	### ============== Digits dataset from sklearn ===================== ###
-	# To use, comment out the mlu.load_csv() calls below
-
-	# from sklearn import datasets, svm, metrics
-	# # The digits dataset
-	# digits = datasets.load_digits()
-	# n_samples = len(digits.images)
-	# data = digits.images.reshape((n_samples, -1))
-	# X_train, y_train = data[:n_samples / 2], digits.target[:n_samples / 2]
-	# X_test, y_test = data[n_samples / 2:], digits.target[n_samples / 2:]
-	### ================================================================== ###
-
 	# open and load csv files
 	if load_method == "csv":
 		X_train, y_train = mlu.load_csv(train_file, True) # load and shuffle training set
@@ -458,19 +462,6 @@ def main(train_file, test_file, load_method="csv", opti_method=None, maxiter=100
 	
 	# write the model to the model file
 	# NNC.print_model(features, model_file)
-
-	# plot convergence 
-	# import pylab
-	# pylab.xlabel('Iteration')
-	# pylab.ylabel('Cost')
-	# pylab.title('Costs')
-	# pylab.plot(range(len(costs)), costs)
-	# pylab.show()
-	# pylab.xlabel('Iteration')
-	# pylab.ylabel('Gradient')
-	# pylab.title('Gradients')
-	# pylab.plot(range(len(mags)), mags)
-	# pylab.show()
 
 
 if __name__ == '__main__':
