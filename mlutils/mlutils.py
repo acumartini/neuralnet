@@ -91,15 +91,18 @@ def multiclass_format(y, c):
 
 ### RESULT METRICS ###
 
-def compute_accuracy(y_test, y_pred):
+def compute_accuracy(y, y_):
 	"""
 	@returns: The precision of the classifier, (correct labels / instance count)
 	"""
 	correct = 0
-	for i, pred in enumerate(y_pred):
-		if int(pred) == y_test[i]:
+	for i, pred in enumerate(y_):
+		if int(pred) == y[i]:
 			correct += 1
-	return float(correct) / y_test.size
+	return float(correct) / y.size
+
+def misclassification_error(y, y_):
+	return 1 - compute_accuracy(y, y_)
 
 def get_pos_precision(self, CM):
 		Tn, Fp = CM[0]
@@ -117,3 +120,33 @@ def get_pos_recall(self, CM):
 
 def get_f_measure(self, P, R):
 	return ((1 + self.beta**2) * P * R) / (((self.beta**2) * P) + R)
+
+### Test Datasets ### 
+# TODO: add test dataset loading functionality
+
+### ============== Digits dataset from sklearn ===================== ###
+# To use, comment out the mlu.load_csv() calls below
+
+# from sklearn import datasets, svm, metrics
+# # The digits dataset
+# digits = datasets.load_digits()
+# n_samples = len(digits.images)
+# data = digits.images.reshape((n_samples, -1))
+# X_train, y_train = data[:n_samples / 2], digits.target[:n_samples / 2]
+# X_test, y_test = data[n_samples / 2:], digits.target[n_samples / 2:]
+### ================================================================== ###
+
+### Plotting Utilities ###
+# TODO: add plotting utility functionality
+# plot convergence 
+# import pylab
+# pylab.xlabel('Iteration')
+# pylab.ylabel('Cost')
+# pylab.title('Costs')
+# pylab.plot(range(len(costs)), costs)
+# pylab.show()
+# pylab.xlabel('Iteration')
+# pylab.ylabel('Gradient')
+# pylab.title('Gradients')
+# pylab.plot(range(len(mags)), mags)
+# pylab.show()
