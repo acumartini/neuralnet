@@ -4,11 +4,27 @@
 
 import numpy as np
 import h5py
-
+import csv
 
 ### DATA IO ###
 
-def load_csv(data, shuffle=False):
+def load_data(data, method, shuffle=False, split=True):
+	if method == "csv":
+		return load_csv(data, shuffle, split)
+	elif method == "hdf":
+		return loadh(data, shuffle, split)
+	else:
+		raise IOError("Data format not recognized.")
+
+def save_data(data, method, path):
+	if method == "csv":
+		return save_csv(data, path)
+	elif method == "hdf":
+		return saveh(data, path)	
+	else:
+		raise IOError("Data format not recognized.")
+
+def load_csv(data, shuffle=False, split=True):
 	"""
 	Loads the csv files into numpy arrays.
 	@parameters: data The data file in csv format to be loaded
@@ -18,7 +34,13 @@ def load_csv(data, shuffle=False):
 	"""
 	print("Loading data from", data)
 	dset = np.loadtxt(data, delimiter=",", dtype='float')
-	return shuffle_split(dset, shuffle)
+	return shuffle_split(dset, shuffle, split)
+
+def save_csv(data, path):
+	# write data to new csv file
+	with open(path, 'wb') as csv_file:
+		writer = csv.writer(csv_file, delimiter=',',quoting=csv.QUOTE_MINIMAL)
+		writer.writerows(data)
 
 def saveh(dset, path):
 	"""
@@ -30,7 +52,7 @@ def saveh(dset, path):
 	f['dset'] = dset
 	f.close()
 
-def loadh(path, shuffle=False):
+def loadh(path, shuffle=False, split=True):
 	"""
 	Loads the h5 data into a numpy array.
 	@parameters: path The path to file (including the file name) to load data from
@@ -41,29 +63,29 @@ def loadh(path, shuffle=False):
 	f = h5py.File(path,'r') 
 	data = f.get('dset') 
 	dset = np.array(data)
-	return shuffle_split(dset, shuffle)
+	return shuffle_split(dset, shuffle, split)
 
-def shuffle_split(dset, shuffle):
+def shuffle_split(dset, shuffle, split):
 	# randomize data
 	if shuffle:
 		dset = shuffle_data(dset)
-
 	# split instances and labels
-	y = dset[:,-1:] # get only the labels
-	X = dset[:,:-1] # remove the labels column from the data array
+	if split:
+		y = dset[:,-1:] # get only the labels
+		X = dset[:,:-1] # remove the labels column from the data array
+		dset = (X, y)
+	return dset
 
-	return X, y
-
-def shuffle_data(X):
+def shuffle_data(data):
 	# get a random list of indices
-	rand_indices = np.arange(X.shape[0])
+	rand_indices = np.arange(data.shape[0])
 	np.random.shuffle(rand_indices)
 
 	# build shuffled array
-	X_ = np.zeros(X.shape)
+	data_ = np.zeros(data.shape)
 	for i, index in enumerate(rand_indices):
-		X_[i] = X[index]
-	return X_
+		data_[i] = data[index]
+	return data_
 
 ### DATA PREPROCESSING ###
 
@@ -84,10 +106,13 @@ def multiclass_format(y, c):
 	i.e., If there are 3 classes {0,1,2}, then all instances of 0 are transformed to
 	[1,0,0], 1''s are transformed to [0,1,0], and 2's become [0,0,1]
 	"""
-	y_ = np.zeros(shape=(len(y), c));
-	for i, lable in enumerate(y):
-		y_[i][int(lable)] = 1.0
-	return y_
+	if c == 2: # standard classification problem, formatting not required
+		return y
+	else:
+		y_ = np.zeros(shape=(len(y), c));
+		for i, lable in enumerate(y):
+			y_[i][int(lable)] = 1.0
+		return y_
 
 ### RESULT METRICS ###
 

@@ -33,37 +33,46 @@ class NeuralNetClassifier():
 	This class is responsible for all neural network classifier operations.  These operations include
 	building a model from training data, class prediction for testing data, and printing the model.
 	"""
-	def __init__(self, method, maxiter, batch_size, units, lmbda, alpha, beta):
+	def __init__(self, method=None, maxiter=100, batch_size=-1, units=None, lmbda=0, 
+				 alpha=100, beta=1000):
+		"""
+		Initialize neural network model based on user specifications.
+		@parameters: 
+			method - specifies the optimization method to use, "l-bfgs", "cg", or
+						   None (defaults to SGD)
+			maxiter - the maximum number of iterations allowed for training
+			batch_size - the number of instance for each minibatch, -1 implies batch processing
+			units - a sequence of integers separated by '.' such that each integer represents 
+					 the number of units in a sequence of hidden layers.
+			lmbda - the regularization term
+			alpha - the numerator for the learning rate schedule (relevant for SGD only)
+			beta - the denominator for the learning rate schedule (relevant for SGD only)
+		"""
+		# validate optimization method input
+		if method not in ["l-bfgs", "cg", "sgd"]:
+			print("Optimization method error: valid methods are 'l-bfgs', 'cg', and 'sgd'. \
+				  Using SGD as default optimization method.")
+			method = None
+
+		# parse hidden layer sizes
+		self.units = [int(u) for u in units.split('-')] if units is not None else None
+
 		# user defined parameters
-		self.units = units # the number of units in each hidden layer
-		self.L = len(units) # the total number of layers including input and output layers
 		self.alpha = float(alpha) # numerator for learning rate calculation
 		self.beta = float(beta) # denominator for learning rate calculation
 		self.lmbda = float(lmbda) # regularization term
 		self.maxiter = int(maxiter) # the maximum number of iterations through the data before stopping
 		self.batch_size = int(batch_size) # for batch updates during gradient descent
 		self.method = "SGD" if method is None else method # the method to use during optimization
-
+		
 		# internal optimization parameters
 		self.gtol = 1e-7 # convergence measure
 		self.init_epsilon = 1e-4 # for random initialization of theta values
 		# self.momentum = 0.95 # dictates the weight of the previous update for momentum calculation
 		# self.momentum_decay = 0.95 # reduces the momentum effect with each iteration
-
+		
 		# internal classification parameters
 		self.threshold = 0.5 # the class prediction threshold
-
-		# build network architecture by computing theta layer sizes and shapes
-		self.sizes = [] # store theta layer divisions in the flattened theta array
-		self.shapes = [] # store theta layer shapes for reshaping
-		for i in range(len(self.units)-1):
-			j_ = self.units[i+1]
-			j = self.units[i]
-			self.sizes.append(j_ * (j + 1))
-			self.shapes.append((j_, j + 1))
-
-		# randomly initialize weights for flattened theta array
-		self.theta = np.random.rand(sum(self.sizes)) * (2 * self.init_epsilon) - self.init_epsilon
 
 	def __str__(self):
 		return "<Neural Network Classifier Instance: units=" + str(self.units) + ">\n"
@@ -77,11 +86,45 @@ class NeuralNetClassifier():
 		training data using gradient descent.
 		@post: parameters(theta) optimized by gradient descent using a cost and its derivative.
 		"""
+		### Build Model Architecture ###
+		if self.units is None:
+			input_units = int(X.shape[1])
+			self.units = [input_units, 2 * input_units]
+		else:
+			# insert the number of input units
+			self.units.insert(0, int(X.shape[1]))
+
+		# calculate and append the number of output units
+		train_clss = np.unique(y) # get the unique elements of the labels array
+		train_clss.sort()
+		num_clss = len(train_clss)
+		if num_clss == 2:
+			self.units.append(1)
+		else:
+			self.units.append(num_clss)
+
+		# format label to multiclass classification arrays
+		y = mlu.multiclass_format(y, num_clss)
+
+		# network structure parameters
+		self.L = len(self.units) # the total number of layers including input and output layers
+
+		# compute theta layer sizes and shapes
+		self.sizes = [] # store theta layer divisions in the flattened theta array
+		self.shapes = [] # store theta layer shapes for reshaping
+		for i in range(len(self.units)-1):
+			j_ = self.units[i+1]
+			j = self.units[i]
+			self.sizes.append(j_ * (j + 1))
+			self.shapes.append((j_, j + 1))
+
+		# randomly initialize weights for flattened theta array
+		self.theta = np.random.rand(sum(self.sizes)) * (2 * self.init_epsilon) - self.init_epsilon
+
+		### Perform Optimization ###
 		self.n = X.shape[1] # the number of features
 		self.m = X.shape[0] # the number of instances
 		self.k = self.units[-1] # the number of output units
-
-		# return self.minimize(self.cost, self.theta, X, y, self.jac, self.gtol)
 		self.theta = self.minimize(self.method, self.cost, self.theta, X, y, self.jac, self.gtol)
 
 	def minimize(self, method, cost, theta, X, y, jac, gtol):
@@ -102,8 +145,6 @@ class NeuralNetClassifier():
 		else:
 			# minibatch process and/or standard gradient descent was requested
 			print("Performing minibatch optimization using", method, "with batch size", self.batch_size)
-
-			# self.alpha = 1
 
 			# iterate through the data at most maxiter times, updating the theta for each feature
 			# also stop iterating if error is less than epsilon (convergence tolerance constant)
@@ -381,16 +422,17 @@ def main(train_file, test_file, load_method="csv", opti_method=None, maxiter=100
 		 batch_size=-1, units=None, lmbda=0, alpha=100, beta=1000):
 	"""
 	Manages files and operations for the neural network model creation, training, and testing.
-	@parameters: load_method - the dataset file format, either "csv" or "hdf"
-				 opti_method - specifies the optimization method to use, "l-bfgs", "cg", or
-				 			   None (defaults to SGD)
-				 maxiter - the maximum number of iterations allowed for training
-				 batch_size - the number of instance for each minibatch, -1 implies batch processing
-				 units - a sequence of integers separated by '.' such that each integer represents 
-				 		 the number of units in a sequence of hidden layers.
-				 lmbda - the regularization term
-				 alpha - the numerator for the learning rate schedule (relevant for SGD only)
-				 beta - the denominator for the learning rate schedule (relevant for SGD only)
+	@parameters: 
+		load_method - the dataset file format, either "csv" or "hdf"
+		opti_method - specifies the optimization method to use, "l-bfgs", "cg", or
+					   None (defaults to SGD)
+		maxiter - the maximum number of iterations allowed for training
+		batch_size - the number of instance for each minibatch, -1 implies batch processing
+		units - a sequence of integers separated by '.' such that each integer represents 
+				 the number of units in a sequence of hidden layers.
+		lmbda - the regularization term
+		alpha - the numerator for the learning rate schedule (relevant for SGD only)
+		beta - the denominator for the learning rate schedule (relevant for SGD only)
 	"""
 	# open and load csv files
 	if load_method == "csv":
@@ -407,41 +449,8 @@ def main(train_file, test_file, load_method="csv", opti_method=None, maxiter=100
 	X_train = mlu.scale_features(X_train, 0.0, 1.0)
 	X_test = mlu.scale_features(X_test, 0.0, 1.0)
 
-	# get units list
-	input_units = int(X_train.shape[1])
-	units_ = [input_units]
-	if units is None:
-		units_.extend([2 * input_units])
-	else:
-		units_.extend([int(u) for u in units.split('-')])
-
-	# check optimization method input
-	if opti_method not in ["l-bfgs", "cg"]:
-		print("Optimization method error: valid methods are 'l-bfgs' and 'cg'. Using Stochastic \
-			  Gradient Descent by default.")
-		opti_method = None
-
-	# calculate the number of output units
-	train_clss = np.unique(y_train) # get the unique elements of the labels array
-	test_clss = np.unique(y_test)
-	train_clss.sort()
-	test_clss.sort()
-	if not np.array_equal(train_clss, test_clss): # verify that training and testing set labels match
-		print("Warning: Training and testing set labels do not agree.")
-	
-	# record the number of output units
-	num_clss = len(train_clss)
-	if num_clss == 2:
-		units_.append(1)
-	else:
-		units_.append(num_clss) # record the number of output units
-
-		# format dataset labels to multiclass classification arrays
-		y_train = mlu.multiclass_format(y_train, num_clss)
-		y_test_ = mlu.multiclass_format(y_test, num_clss)
-
 	# create the neural network classifier using the training data
-	NNC = NeuralNetClassifier(opti_method, maxiter, batch_size, units_, lmbda, alpha, beta)
+	NNC = NeuralNetClassifier(opti_method, maxiter, batch_size, units, lmbda, alpha, beta)
 	print("\nCreated a neural network classifier =", NNC)
 
 	# fit the model to the loaded training data
@@ -459,9 +468,6 @@ def main(train_file, test_file, load_method="csv", opti_method=None, maxiter=100
 		print(prob)
 	# print simple precision metric to the console
 	print('Accuracy:  ' + str(mlu.compute_accuracy(y_test, y_pred)))
-	
-	# write the model to the model file
-	# NNC.print_model(features, model_file)
 
 
 if __name__ == '__main__':

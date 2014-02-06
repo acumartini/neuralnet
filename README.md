@@ -16,7 +16,7 @@ A vectorized implementation of an artificial neural network learning algorithm w
 </li>
 <li>Break main() and minimize() methods into separate files to isolate NN class functionality.
   <ul>
-	  <li>IN PROGRESS: main() will become a generic process() method that is called from the command line with flexible argument passing via getopt.</li>
+	  <li>COMPLETE: main() will become a generic process() method that is called from the command line with flexible argument passing via getopt. <br>UPDATE: Decided to work toward sklearn style NNC class. All model architecture building functionality has been successfully pushed into the NeuralNetworkClassifier class. </li>
 	  <li>COMPLETE: minimize() will take arguments that specify a method of optimization</li>
   </ul>
 </li>
