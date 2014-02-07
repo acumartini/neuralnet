@@ -3,6 +3,7 @@
 *.png
 *.c
 *.dat
+*.ipynb
 
 ### Specific ###
 process_log.txt

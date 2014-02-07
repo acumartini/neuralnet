@@ -38,11 +38,14 @@ from mlutils.boost import boost_data
 
 ### Logging Functionaliy ###
 
-print 'Opening log file...'
 log_file = "process_log.txt"
+print 'Opening log file:', log_file
 log = open(log_file, "w")
 def lw(s):
 	log.write(s + '\n')
+def output(s):
+	lw(str(s))
+	print s
 now = datetime.datetime.now()
 lw('Log Opened @ ' + str(now.strftime("%Y-%m-%d %H:%M")) + '\n')
 def lrw():
@@ -81,12 +84,22 @@ class CLFProcessor():
 		X_train, y_train, X_test, y_test = self.clf_setup()
 
 		# generate classification results
+		### Unsueprvised ###
+		# kNN
+		output(80 * '=')
+		output("kNN")
+		results.append(self.benchmark(KNeighborsClassifier(n_neighbors=20), X_train, y_train, X_test, y_test))
+		
+		# NearestCentroid without threshold
+		output(80 * '=')
+		output("NearestCentroid (aka Rocchio classifier)")
+		results.append(self.benchmark(NearestCentroid(), X_train, y_train, X_test, y_test))
+
+		### Supervised ###
 		# Logistic Regression classifiers
 		for penalty in ["l2", "l1"]:
-		    print 80 * '='
-		    lw(80 * '=')
-		    print "LogisticRegression with %s penalty" % penalty.upper()
-		    lw("LogisticRegression with %s penalty" % penalty.upper())
+		    output(80 * '=')
+		    output("LogisticRegression with %s penalty" % penalty.upper())
 		    # train Logistic Regression model
 		    results.append(self.benchmark(LogisticRegression(penalty=penalty, #class_weight={1:1000},
 		                                  dual=False, tol=.00000001), X_train, y_train, X_test, y_test))
@@ -96,46 +109,26 @@ class CLFProcessor():
 		# 								X_test, y_test))
 		
 		# Naive Bayes classifiers
-		print 80 * '='
-		lw(80 * '=')
+		output(80 * '=')
 		print "Naive Bayes"
 		lw("Naive Bayes")
 		if self.feature_type == 'binary':
 			results.append(self.benchmark(MultinomialNB(alpha=.01), X_train, y_train, X_test, y_test))
 		else:
 			results.append(self.benchmark(GaussianNB(), X_train, y_train, X_test, y_test))
-		
-		# kNN
-		print 80 * '='
-		lw(80 * '=')
-		print "kNN"
-		lw("kNN")
-		results.append(self.benchmark(KNeighborsClassifier(n_neighbors=20), X_train, y_train, X_test, y_test))
-		
-		# NearestCentroid without threshold
-		print 80 * '='
-		lw(80 * '=')
-		print "NearestCentroid (aka Rocchio classifier)"
-		lw("NearestCentroid (aka Rocchio classifier)")
-		results.append(self.benchmark(NearestCentroid(), X_train, y_train, X_test, y_test))
 
-		print 80 * '='
-		lw(80 * '=')
-		print "SVC with poly kernel"
-		lw("SVC with poly kernel")
-		# results.append(self.benchmark(SVC(C=1000, probability=True, kernel='poly', tol=.00001), X_train, y_train, X_test, y_test))
+		output(80 * '=')
+		output("SVC with poly kernel")
+		# results.append(self.benchmark(SVC(C=1000, probability=True, kernel='poly', tol=.00001), 
+		# 			   X_train, y_train, X_test, y_test))
 		results.append(self.benchmark(SVC(probability=True, kernel='rbf'), X_train, y_train, X_test, y_test))
 
-		print 80 * '='
-		lw(80 * '=')
-		print "GradientBoostingClassifier with 100 estimators using entropy"
-		lw("GradientBoostingClassifier with 100 estimators using entropy")
+		output(80 * '=')
+		output("GradientBoostingClassifier with 100 estimators using entropy")
 		results.append(self.benchmark(GBC(n_estimators=100), X_train, y_train, X_test, y_test))
 
-		print 80 * '='
-		lw(80 * '=')
-		print "Random Forest Ensemble with 100 estimators using entropy"
-		lw("Random Forest Ensemble with 100 estimators using entropy")
+		output(80 * '=')
+		output("Random Forest Ensemble with 100 estimators using entropy")
 		results.append(self.benchmark(RFC(criterion='entropy', n_estimators=100), X_train, y_train, X_test, y_test))
 		
 		# rearrange results into sets
@@ -144,15 +137,12 @@ class CLFProcessor():
 		# create P/R and AUC graphs
 		self.plot_results(results, y_test)
 
-		print "<<< FINISHED PROCESSING >>>"
-		lw("\n<<< FINISHED PROCESSING >>>")
+		output("<<< FINISHED PROCESSING >>>")
 		return results, y_test
 
 	def clf_setup(self, shuffle=False):
 		# load tarining and testing data from csv
-		print 'Loading training dataset...'
 		X_train, y_train = mlu.load_csv(self.traindata, shuffle)
-		print 'Loading testing dataset...'
 		X_test, y_test = mlu.load_csv(self.testdata, shuffle)
 
 		# boost positive instances in training data
@@ -169,24 +159,16 @@ class CLFProcessor():
 		return X_train, y_train, X_test, y_test
 
 	def benchmark(self, clf, X_train, y_train, X_test, y_test):
-		print 80 * '_'
-		lw(80 * '_')
+		output(80 * '_')
 
 		# fit
-		print "Training: "
-		lw("Training: ")
-		print clf
+		output("Training:")
 		t0 = time()
 		clf.fit(X_train, y_train)
 		train_time = time() - t0
-		print "train time: %0.3fs" % train_time
-		lw("train time: %0.3fs" % train_time)
+		output("train time: %0.3fs" % train_time)
 
 		# predict
-		clf_descr = str(clf).split('(')[0]
-		# if clf_descr == "GaussianNB":  dev note: This does not work...
-			# clf.class_prior_ = [.99, .01]
-		
 		t0 = time()
 		pred = clf.predict(X_test)
 		try:
@@ -198,10 +180,9 @@ class CLFProcessor():
 		except:
 			log_proba = None
 		test_time = time() - t0
-		print "test time:  %0.3fs" % test_time
-		lw("test time:  %0.3fs" % test_time)
+		output("test time:  %0.3fs" % test_time)
 
-		# get metrics for the positve class (heavy class imbalance)
+		# get metrics for the positve class only (heavy class imbalance)
 		# p_score = mlu.get_pos_precision(cm(y_test, pred))
 		# r_score = mlu.get_pos_recall(cm(y_test, pred))
 		# f_measure = mlu.get_f_measure(p_score, r_score)
@@ -211,15 +192,14 @@ class CLFProcessor():
 		p_score_avg = p_scores.mean()
 		r_score_avg = r_scores.mean()
 		f_measure_avg = f_measures.mean()
-		print "precision:  %0.3f \trecall:  %0.3f" % (p_score_avg, r_score_avg)
-		lw("precision:  %0.3f \trecall:  %0.3f" % (p_score_avg, r_score_avg))
+		output("precision:  %0.3f \trecall:  %0.3f" % (p_score_avg, r_score_avg))
 
-		print "Classification results:"
-		lw("Classification results:")
-		print cr(y_test, pred)
-		lw(str(cr(y_test, pred)))
-		print cm(y_test, pred)
-		lw(str(cm(y_test, pred)))
+		# output results
+		output("Classification results:")
+		output(cr(y_test, pred))
+		output(cm(y_test, pred))
+
+		clf_descr = str(clf).split('(')[0] # get the name of the classifier from its repr()
 
 		return clf_descr, p_score_avg, r_score_avg, f_measure_avg, train_time, test_time, proba
 
@@ -343,17 +323,14 @@ class CLFProcessor():
 						facecolor=fig.get_facecolor(), edgecolor='none')
 
 
-
 def main(traindata, testdata, load_method="csv", feature_type='continuous', boost=False, boost_amount=0,
 	     rank_list=None, reduce_amount=None):
-	
 	# open log
 	log = open(log_file, "a")
-	print "<<< BEGIN PROCESSING >>>\n"
-	lw("<<< BEGIN PROCESSING >>>\n")
-	start_str = str(boost) + ' ' + str(boost_amount) + ' ' + str(rank_list) + ' ' \
-			    + str(reduce_amount) + ' ' +  str(feature_type)
-	lw(start_str)
+	output("<<< BEGIN PROCESSING >>>\n")
+	start_str = "Parameters: " + str(boost) + ' ' + str(boost_amount) + ' ' + str(rank_list) + ' ' \
+                + str(reduce_amount) + ' ' +  str(feature_type) + '\n'
+	output(start_str)
 
 	# process
 	processor = CLFProcessor(traindata, testdata, load_method, feature_type, boost, boost_amount,

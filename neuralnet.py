@@ -15,7 +15,7 @@
 #	- The file type can be either CSV or HDF, specified as "csv" and "hdf" respectively.
 #	- Optimization method options are: "l-bfgs", "cg", None (Stochastic Gradient Descent)
 #	- If the batch_size is set to -1, then batch optimization is used
-#	- Hidden layer sizes must be separated by dashes i.e., "10-50-10"
+#	- Hidden layer sizes must be separated by dashes i.e., "100-50-50"
 #
 # python_version  : 3.3.3
 #==============================================================================
@@ -50,9 +50,8 @@ class NeuralNetClassifier():
 		"""
 		# validate optimization method input
 		if method not in ["l-bfgs", "cg", "sgd"]:
-			print("Optimization method error: valid methods are 'l-bfgs', 'cg', and 'sgd'. \
-				  Using SGD as default optimization method.")
-			method = None
+			mes = "Optimization Method Error: valid methods are 'l-bfgs', 'cg', and 'sgd'."
+			raise Exception(mes)
 
 		# parse hidden layer sizes
 		self.units = [int(u) for u in units.split('-')] if units is not None else None
@@ -68,8 +67,8 @@ class NeuralNetClassifier():
 		# internal optimization parameters
 		self.gtol = 1e-7 # convergence measure
 		self.init_epsilon = 1e-4 # for random initialization of theta values
-		# self.momentum = 0.95 # dictates the weight of the previous update for momentum calculation
-		# self.momentum_decay = 0.95 # reduces the momentum effect with each iteration
+		self.init_momentum = 0 #0.95 # dictates the weight of the previous update for momentum calculation
+		self.momentum_decay = 0.9 # reduces the momentum effect with each iteration
 		
 		# internal classification parameters
 		self.threshold = 0.5 # the class prediction threshold
@@ -125,6 +124,8 @@ class NeuralNetClassifier():
 		self.n = X.shape[1] # the number of features
 		self.m = X.shape[0] # the number of instances
 		self.k = self.units[-1] # the number of output units
+		self.momentum = self.init_momentum
+
 		self.theta = self.minimize(self.method, self.cost, self.theta, X, y, self.jac, self.gtol)
 
 	def minimize(self, method, cost, theta, X, y, jac, gtol):
@@ -135,19 +136,21 @@ class NeuralNetClassifier():
 		if self.batch_size == -1 and method == "l-bfgs":
 			# L-BFGS-b optimization
 			print("Performing batch optimization using L-BFGS-b.")
-			theta, f, d = opti.fmin_l_bfgs_b(cost, theta, fprime=jac, args=(X, y), factr=10.0, 
-				pgtol=1e-50, maxiter=self.maxiter, approx_grad=False, disp=1)
+			theta, f, d = opti.fmin_l_bfgs_b(
+					cost, theta, fprime=jac, args=(X, y), factr=10.0, 
+					pgtol=1e-50, maxiter=self.maxiter, approx_grad=False, disp=1)
 		elif self.batch_size == -1 and method == "cg":
 			# conjugate gradient optimization
 			print("Performing batch optimization using CG.")
-			theta = opti.fmin_cg(cost, theta, fprime=jac, args=(X, y), 
-										gtol=gtol, maxiter=self.maxiter, disp=1)
+			theta = opti.fmin_cg(
+					cost, theta, fprime=jac, args=(X, y), 
+					gtol=gtol, maxiter=self.maxiter, disp=1)
 		else:
 			# minibatch process and/or standard gradient descent was requested
 			print("Performing minibatch optimization using", method, "with batch size", self.batch_size)
 
-			# iterate through the data at most maxiter times, updating the theta for each feature
-			# also stop iterating if error is less than epsilon (convergence tolerance constant)
+			# iterate through the data at most maxiter times, updating the theta for each feature also stop 
+			# iterating if magnitude of the gradient is less than epsilon (convergence tolerance constant)
 			for iteration in range(self.maxiter):
 				# compute learning rate
 				learning_rate = self.alpha / (self.beta + iteration)
@@ -156,16 +159,17 @@ class NeuralNetClassifier():
 				step = 0 # stores last update value for momentum calculations
 
 				# iterate through batches
-				batch_count = 0
-				for X_, y_ in self.mini_batch(X, y):
+				for batch_count, (X_, y_) in enumerate(self.mini_batch(X, y)):
 					if method == "l-bfgs":
 						# L-BFGS-b optimization
-						theta, f, d = opti.fmin_l_bfgs_b(cost, theta, fprime=jac, args=(X_, y_), 
-										factr=10.0, pgtol=1e-50, maxiter=20, approx_grad=False)
+						theta, f, d = opti.fmin_l_bfgs_b(
+								cost, theta, fprime=jac, args=(X_, y_), 
+								factr=10.0, pgtol=1e-50, maxiter=20, approx_grad=False)
 					elif method == "cg":
-						# conjugate gradient optimization
-						theta = opti.fmin_cg(cost, theta, fprime=jac, args=(X_, y_), 
-													gtol=1e-50, maxiter=3, disp=False)
+						# Conjugate Gradient optimization
+						theta = opti.fmin_cg(
+								cost, theta, fprime=jac, args=(X_, y_), 
+								gtol=1e-50, maxiter=3, disp=False)
 					else: # Stochastic Gradient Descent
 						# compute the cost
 						costs.append(self.cost(theta, X_, y_))
@@ -180,14 +184,14 @@ class NeuralNetClassifier():
 						# 	print i, D[i], ga
 
 						# update theta parameters
-						self.theta -= learning_rate * D
-						
-						# TODO: finish momentum implementation
-						# jump = self.momentum * step
-						# self.theta -= jump
-						# correction = learning_rate * D
-						# self.theta -= correction
-						# step = jump + correction
+						if iteration == 0 and batch_count == 0: # calculate first step to initiate momentum
+							last_step = learning_rate * D
+							self.theta -= last_step
+						else: # use momentum
+							correction = learning_rate * D
+							step = (self.momentum * last_step) + ((1 - self.momentum) * correction)
+							self.theta -= step
+							last_step = step
 
 						# calculate the magnitude of the gradient and check for convergence
 						mag = np.linalg.norm(D)
@@ -195,8 +199,6 @@ class NeuralNetClassifier():
 						mags_tmp.append(mag)
 						if gtol > mag:
 							break
-					
-					batch_count += 1
 				
 				# output iteration number and avg magnitude of the gradient if appropriate
 				if len(mags_tmp) > 0:
@@ -205,12 +207,15 @@ class NeuralNetClassifier():
 					print("iteration", iteration)
 
 				# update momentum
-				# self.momentum = self.momentum_decay * self.momentum
-				# print "momentum", self.momentum
+				self.momentum = self.momentum_decay * self.momentum
 
 		return theta #, costs, mags
 
 	def mini_batch(self, X, y):
+		"""
+		Returns a generator object representing the X, y pairs for each minibatch.  Generates
+		batches using the batch_size parameter.  A batch_size of -1 implies batch processing.
+		"""
 		b = self.batch_size # var to clean up code
 
 		if b == -1 or b >= self.m: # batch process by default
@@ -337,11 +342,11 @@ class NeuralNetClassifier():
 
 		return grad_approx
 
-	# =====================================================================================
-	# Model Architecture Utilities
-
 	def compute_activation(self, z):
 		return np.divide(1.0 , (1 + np.exp(- z)))
+
+	# =====================================================================================
+	# Model Architecture Utilities
 
 	def unpack_parameters(self, param):
 		params = []
@@ -468,7 +473,6 @@ def main(train_file, test_file, load_method="csv", opti_method=None, maxiter=100
 		print(prob)
 	# print simple precision metric to the console
 	print('Accuracy:  ' + str(mlu.compute_accuracy(y_test, y_pred)))
-
 
 if __name__ == '__main__':
 	"""
