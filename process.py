@@ -22,7 +22,12 @@ from sklearn.linear_model import Perceptron
 from sklearn.naive_bayes import BernoulliNB, MultinomialNB, GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.neighbors import NearestCentroid
+from sklearn.neural_network import BernoulliRBM
+
+# sklearn utils
 from sklearn.utils.extmath import density
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import Binarizer
 
 # from sklearn import metrics
 from sklearn.metrics import precision_recall_fscore_support as get_scores
@@ -32,7 +37,7 @@ from sklearn.metrics import classification_report as cr
 from sklearn.metrics import confusion_matrix as cm
 
 from mlutils import mlutils as mlu
-from mlutils.feature_reduction import reduce_data_features as feat_reduce
+from mlutils.feature_reduction import reduce_features
 from mlutils.boost import boost_data
 
 
@@ -97,12 +102,24 @@ class CLFProcessor():
 
 		### Supervised ###
 		# Logistic Regression classifiers
-		for penalty in ["l2", "l1"]:
+		for penalty in ["l2"]: #, "l1"]:
 		    output(80 * '=')
 		    output("LogisticRegression with %s penalty" % penalty.upper())
 		    # train Logistic Regression model
 		    results.append(self.benchmark(LogisticRegression(penalty=penalty, #class_weight={1:1000},
 		                                  dual=False, tol=.00000001), X_train, y_train, X_test, y_test))
+
+		# RBM/Logistic Regression Pipeline
+		# output(80 * '=')
+		# output("RBM/LogisticRegression Pipeline")
+		# rbm = BernoulliRBM(n_components=X_train.shape[1] + 1, random_state=0, verbose=True)
+		# binarizer = Binarizer(threshold=0.5)
+		# X_train_b = binarizer.fit_transform(X_train, )
+		# hidden_layer = rbm.fit_transform(X_train_b, y_train)
+		# logistic = LogisticRegression()
+		# logistic.coef_ = hidden_layer
+		# # classifier = Pipeline(steps=[('rbm', rbm), ('logistic', logistic)])
+		# results.append(self.benchmark(logistic, X_train, y_train, X_test, y_test))
 
 	    # Perceptron with class weighting
 		# results.append(self.benchmark(Perceptron(class_weight={0:1000}, n_iter=1000), X_train, y_train, 
@@ -145,14 +162,18 @@ class CLFProcessor():
 		X_train, y_train = mlu.load_csv(self.traindata, shuffle)
 		X_test, y_test = mlu.load_csv(self.testdata, shuffle)
 
+		# perform feature scaling
+		X_train = mlu.scale_features(X_train, 0.0, 1.0)
+		X_test = mlu.scale_features(X_test, 0.0, 1.0)
+
 		# boost positive instances in training data
 		if self.boost:
 			X_train, y_train = boost_data(X_train, y_train, boost_amount)
 
 		# perform feature reduction based on provided rank list
 		if self.rank_list is not None:
-			X_train_ = feat_reduce(X_train, self.rank_list, self.reduce_amount)
-			X_test_ = feat_reduce(X_test, self.rank_list, self.reduce_amount)
+			X_train(X_train, self.rank_list, self.reduce_amount)
+			X_test(X_test, self.rank_list, self.reduce_amount)
 			return X_train_, y_train, X_test_, y_test
 
 		# return data sets and features for classification

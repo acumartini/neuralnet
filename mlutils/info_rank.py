@@ -30,11 +30,7 @@ class InfoRank():
 		# calculate domain cardinailties for each feature and save index in the name hash
 		for i, col in enumerate(X.T):
 			num_val = 0
-			vals = set(col) # dev note: was []
-			# for val in col:
-			# 	if val not in vals:
-			# 		num_val += 1
-			# 		vals.append(val)
+			vals = set(col)
 			self.feat_cards.append(len(vals))
 		
 		# create rank list, zip features, and sort
@@ -230,7 +226,8 @@ class InfoRank():
 		for var in card:
 			p_ = p * probas[var]
 			n_ = n * probas[var]
-			result += (((prob_counts[var][1] - p_)**2)/p_ + ((prob_counts[var][0] - n_)**2)/n_) if probas[var] != 0.0 else 0.0
+			result += (((prob_counts[var][1] - p_)**2)/p_ \
+				      + ((prob_counts[var][0] - n_)**2)/n_) if probas[var] != 0.0 else 0.0
 
 		return result > self.chi_squared_min
 
@@ -273,6 +270,7 @@ class InfoRank():
 		# get the p/n counts for the chosen attribute A before the split
 		p = float(np.sum(y==1))
 		n = float(np.sum(y==0))
+		
 		# return a tuple which includes the entropy and chi_squared_test values
 		return entropy(cardinality, A, y, p, n)
 

@@ -32,8 +32,8 @@ def load_csv(data, shuffle=False, split=True):
 	@returns: X - numpy array of data instances with dtype=float
 			  y - numpy array of labels
 	"""
-	print("Loading data from", data)
-	dset = np.loadtxt(data, delimiter=",", dtype='float')
+	print "Loading data from", data
+	dset = np.loadtxt(data, delimiter=",", dtype='float32')
 	return shuffle_split(dset, shuffle, split)
 
 def save_csv(data, path):

@@ -2,6 +2,11 @@
 # Adapted from sklearn tutorial on parameter tuning for SVC using GridSearchCV
 # 2-6-14
 
+import sys
+import mlutils as mlu
+
+from sklearn.svm import SVC
+
 """
 =====================================================================
 Parameter estimation using grid search with a nested cross-validation
@@ -24,7 +29,7 @@ from sklearn.grid_search import GridSearchCV
 from sklearn.metrics import precision_score
 from sklearn.metrics import recall_score
 
-def search(X, y, clf, tuned_paramters):
+def search(X, y, clf, tuned_parameters):
     """
     Performs a grid search using sklearns grid_search functionality.  The best classifier is found
     out of the given tuned parameters using the scoring metrics below.
@@ -45,7 +50,7 @@ def search(X, y, clf, tuned_paramters):
     for score_name, score_func in scores:
         # tune
         print "# Tuning hyper-parameters for %s\n" % score_name
-        clf = GridSearchCV(SVC(kernel='poly', tol=.00001), tuned_parameters, score_func=score_func)
+        clf = GridSearchCV(SVC(kernel='poly', tol=.00001), tuned_parameters, scoring=score_func)
         clf.fit(X, y)
 
         print "Best parameters set found on development set:\n"
@@ -60,9 +65,10 @@ def search(X, y, clf, tuned_paramters):
 def main(data):
     # load data
     X, y = mlu.load_csv(data)
+    y = y.flatten()
 
     # initialize classifier
-    clf = None
+    clf = SVC(probability=True, kernel='rbf')
 
     # setup parameter tuning dict
     # example
@@ -73,7 +79,7 @@ def main(data):
 
     # perform grid search
     print "Performing coarse parameter tuning via sklearn's GridSearchCV functionality.\n"
-    search(X, y, clf, tuned_paramters)
+    search(X, y, clf, tuned_parameters)
 
 if __name__ == '__main__':
     """

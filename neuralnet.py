@@ -17,7 +17,7 @@
 #	- If the batch_size is set to -1, then batch optimization is used
 #	- Hidden layer sizes must be separated by dashes i.e., "100-50-50"
 #
-# python_version  : 3.3.3
+# python_version  : 2.7.6
 #==============================================================================
 
 import sys
@@ -71,10 +71,10 @@ class NeuralNetClassifier():
 		self.momentum_decay = 0.9 # reduces the momentum effect with each iteration
 		
 		# internal classification parameters
-		self.threshold = 0.5 # the class prediction threshold
+		self.threshold = 0.5 # class prediction threshold
 
 	def __str__(self):
-		return "<Neural Network Classifier Instance: units=" + str(self.units) + ">\n"
+		return "<Neural Network Classifier Instance: units=" + str(self.units) + ">"
 
 	# =====================================================================================
 	# Optimization
@@ -135,19 +135,19 @@ class NeuralNetClassifier():
 		# check if batch processing is requested for advanced optimization techniques
 		if self.batch_size == -1 and method == "l-bfgs":
 			# L-BFGS-b optimization
-			print("Performing batch optimization using L-BFGS-b.")
+			print "Performing batch optimization using L-BFGS-b."
 			theta, f, d = opti.fmin_l_bfgs_b(
 					cost, theta, fprime=jac, args=(X, y), factr=10.0, 
 					pgtol=1e-50, maxiter=self.maxiter, approx_grad=False, disp=1)
 		elif self.batch_size == -1 and method == "cg":
 			# conjugate gradient optimization
-			print("Performing batch optimization using CG.")
+			print "Performing batch optimization using CG."
 			theta = opti.fmin_cg(
 					cost, theta, fprime=jac, args=(X, y), 
 					gtol=gtol, maxiter=self.maxiter, disp=1)
 		else:
 			# minibatch process and/or standard gradient descent was requested
-			print("Performing minibatch optimization using", method, "with batch size", self.batch_size)
+			print "Performing minibatch optimization using", method, "with batch size", self.batch_size
 
 			# iterate through the data at most maxiter times, updating the theta for each feature also stop 
 			# iterating if magnitude of the gradient is less than epsilon (convergence tolerance constant)
@@ -202,9 +202,9 @@ class NeuralNetClassifier():
 				
 				# output iteration number and avg magnitude of the gradient if appropriate
 				if len(mags_tmp) > 0:
-					print("iteration", iteration, ":", np.mean(mags_tmp))
+					print "iteration", iteration, ":", np.mean(mags_tmp)
 				else:
-					print("iteration", iteration)
+					print "iteration", iteration
 
 				# update momentum
 				self.momentum = self.momentum_decay * self.momentum
@@ -213,7 +213,7 @@ class NeuralNetClassifier():
 
 	def mini_batch(self, X, y):
 		"""
-		Returns a generator object representing the X, y pairs for each minibatch.  Generates
+		Returns a generator object representing the X, y pairs for each mini-batch.  Generates
 		batches using the batch_size parameter.  A batch_size of -1 implies batch processing.
 		"""
 		b = self.batch_size # var to clean up code
@@ -255,7 +255,8 @@ class NeuralNetClassifier():
 		for i, x in enumerate(X):
 			a, h_x = self.forward_prop(x, thetas)
 			for k in range(self.k):
-				cost_sum += (np.dot(y[i][k], np.log(h_x[k])) + np.dot((1 - y[i][k]), np.log(1 - h_x[k]))).sum()
+				cost_sum += (np.dot(y[i][k], np.log(h_x[k])) \
+                             + np.dot((1 - y[i][k]), np.log(1 - h_x[k]))).sum()
 
 		# normalize and add regularization
 		return ((- 1.0 / m) * cost_sum) + reg
@@ -432,7 +433,7 @@ def main(train_file, test_file, load_method="csv", opti_method=None, maxiter=100
 		opti_method - specifies the optimization method to use, "l-bfgs", "cg", or
 					   None (defaults to SGD)
 		maxiter - the maximum number of iterations allowed for training
-		batch_size - the number of instance for each minibatch, -1 implies batch processing
+		batch_size - the number of instance for each mini-batch, -1 implies batch processing
 		units - a sequence of integers separated by '.' such that each integer represents 
 				 the number of units in a sequence of hidden layers.
 		lmbda - the regularization term
@@ -447,8 +448,7 @@ def main(train_file, test_file, load_method="csv", opti_method=None, maxiter=100
 		X_train, y_train = mlu.loadh(train_file, True) # load and shuffle training set
 		X_test, y_test = mlu.loadh(test_file)
 	else:
-		raise Exception("Dataset file type not recognized: acceptable formats are 'csv' and 'hfd'. \
-						 Specify method with second argument.")
+		raise Exception("Dataset file type not recognized: acceptable formats are 'csv' and 'hfd'.")
 
 	# perform feature scaling
 	X_train = mlu.scale_features(X_train, 0.0, 1.0)
@@ -456,23 +456,24 @@ def main(train_file, test_file, load_method="csv", opti_method=None, maxiter=100
 
 	# create the neural network classifier using the training data
 	NNC = NeuralNetClassifier(opti_method, maxiter, batch_size, units, lmbda, alpha, beta)
-	print("\nCreated a neural network classifier =", NNC)
+	print "\nCreated a neural network classifier\n\t", NNC
 
 	# fit the model to the loaded training data
-	print("\nFitting the training data...")
+	print "\nFitting the training data..."
 	# costs, mags = NNC.fit(X_train, y_train)
 	NNC.fit(X_train, y_train)
 
 	# predict the results for the test data
-	print("\nGenerating probability prediction for the test data...")
+	print "\nGenerating probability prediction for the test data..."
 	y_pred = NNC.predict(X_test)
 
-	### print the classification results ###
-	print("\nThe probabilities for each instance in the test set are:\n")
+	### output classification results ###
+	# output class prediction probability for each instance in the test set
+	print "\nThe probabilities for each instance in the test set are:\n"
 	for prob in NNC.predict_proba(X_test):
-		print(prob)
-	# print simple precision metric to the console
-	print('Accuracy:  ' + str(mlu.compute_accuracy(y_test, y_pred)))
+		print prob
+	# output accuracy
+	print 'Accuracy: ', mlu.compute_accuracy(y_test, y_pred)
 
 if __name__ == '__main__':
 	"""

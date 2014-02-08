@@ -32,7 +32,7 @@ def main(reduced, train_file, test_file, rank_list, *amounts):
 	print "Finished!"
 
 
-def reduce_data_features(X, rank_list, top=None):
+def reduce_features(X, rank_list, top=None):
 	# removes features based on info_gain criterion and pre-calculated gain lists
 	print "Reducing features using top", top, "ranked features from", rank_list
 	
