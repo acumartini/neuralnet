@@ -146,8 +146,8 @@ class NeuralNetClassifier():
 					cost, theta, fprime=jac, args=(X, y), 
 					gtol=gtol, maxiter=self.maxiter, disp=1)
 		else:
-			# minibatch process and/or standard gradient descent was requested
-			print "Performing minibatch optimization using", method, "with batch size", self.batch_size
+			# mini-batch process and/or standard gradient descent was requested
+			print "Performing mini-batch optimization using", method, "with batch size", self.batch_size
 
 			# iterate through the data at most maxiter times, updating the theta for each feature also stop 
 			# iterating if magnitude of the gradient is less than epsilon (convergence tolerance constant)
