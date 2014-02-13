@@ -8,7 +8,7 @@
 #	(BFGS, CG), code optimizations using LLVM interfaces, and options for unsupervised training of DBN's.
 #
 # usage : python neuralnet.py <traing_set> <testing_set> <file_type> <optimization_method> <maxiter> 
-# 	<batch_size> <hidden_layer_sizes> <regularization_term> <learning_rate> 
+# 	<batch_size> <hidden_layer_sizes> <regularization_term> <alpha> <beta> 
 # 	Usage Notes:
 #	- The training and testing set are assumed to have the same number of features.  The algorithm will
 #	automatically detect and handle multi-class classification problems.
@@ -16,6 +16,7 @@
 #	- Optimization method options are: "l-bfgs", "cg", None (Stochastic Gradient Descent)
 #	- If the batch_size is set to -1, then batch optimization is used
 #	- Hidden layer sizes must be separated by dashes i.e., "100-50-50"
+#	- alpha and beta are used to compute the learning rate for each iteration of SGD (alpha / beta + t)
 #
 # python_version  : 2.7.6
 #==============================================================================
@@ -240,7 +241,9 @@ class NeuralNetClassifier():
 	# Cost Function and Gradient Computation
 
 	def cost(self, theta, X, y):
-		# compute the cost function J(theta) using the regularization term lmbda
+		"""
+		Compute the cost function J(theta) using the regularization term lmbda.
+		"""
 		m = X.shape[0]
 		theta_sum = 0
 		thetas = self.unpack_parameters(theta)
@@ -262,6 +265,9 @@ class NeuralNetClassifier():
 		return ((- 1.0 / m) * cost_sum) + reg
 
 	def jac(self, theta, X, y):
+		"""
+		Compute the derivative of the cost function using forward and back propagation.
+		"""
 		m = X.shape[0] # number of instances
 
 		# set the delta accumulator for gradient descent to 0
@@ -291,6 +297,9 @@ class NeuralNetClassifier():
 		return (1.0 / m) * (self.delta + theta_reg)
 
 	def forward_prop(self, x_, thetas=None):
+		"""
+		Forward propagate the activation values starting with the input layer.
+		"""
 		a = np.array(()) # store activation values for each hidden and output layer unit
 
 		# iterate through each layer in the network computing and forward propagating activation values
@@ -305,6 +314,10 @@ class NeuralNetClassifier():
 		return a, a_
 
 	def back_prop(self, x, y, a_, thetas):
+		"""
+		Back propagate the error found when comparing the output layer activation values to the
+		the label values.
+		"""
 		a = self.unpack_activations(a_) # activation values for each layer
 		d = [a[-1] - y] # delta_L (prediction error in output layer)
 
@@ -325,6 +338,9 @@ class NeuralNetClassifier():
 		self.delta += delta
 
 	def estimate_gradient(self, X, y):
+		"""
+		Use a two-sided distance method to estimate the derivative of the cost function.
+		"""
 		epsilon = .0001 # the the one-sided distance from the actual theta parameter value
 
 		# compute the derivative estimate with respect to each theta parameter
@@ -344,12 +360,18 @@ class NeuralNetClassifier():
 		return grad_approx
 
 	def compute_activation(self, z):
+		"""
+		The logistic function used to compute activation values.
+		"""
 		return np.divide(1.0 , (1 + np.exp(- z)))
 
 	# =====================================================================================
 	# Model Architecture Utilities
 
 	def unpack_parameters(self, param):
+		"""
+		Extracts and returns the parameter array for each layer in the network.
+		"""
 		params = []
 		i = 0 # store flattened theta array index value from previous iteration
 		for j,s in zip(self.sizes, self.shapes):
@@ -358,6 +380,9 @@ class NeuralNetClassifier():
 		return params
 
 	def unpack_activations(self, a_):
+		"""
+		Extracts and returns the activation array for each layer in the network.
+		"""
 		a = []
 		i = 0 # store flattened activation array index value from previous iteration
 		for j in self.units[1:]:

@@ -76,14 +76,17 @@ def tune_features(clf, X_train, y_train, X_val, y_val, plot=False, index_rank=No
 		fig, ax = plt.subplots(figsize=(12,9))
 		ax.plot(error_val, label="Validation Set Error")
 		ax.plot(error_train, label="Training Set Error")
+
 		ax.set_xlabel('Number of Features', fontsize=18)
 		ax.set_ylabel('Error', fontsize=18)
+
 		title = ax.set_title('Feature Set Error Analysis', fontsize=22)
 		title.set_y(1.03) # adjust space between title and graph
+
 		ax.legend(loc='best')
 		ax.grid(True)
 
-		plt.rc('font', **font)
+		# plt.rc('font', **font)
 		plt.savefig(("feature_set_error.png"))
 		plt.show()
 
@@ -144,7 +147,7 @@ def tune_regularization(clf, X, y, X_, y_, plot=False, error_func=None):
 		ax.legend(loc='best')
 		ax.grid(True)
 
-		plt.rc('font', **font)
+		# plt.rc('font', **font)
 		plt.savefig(("regularization_error.png"))
 		plt.show()
 
@@ -205,13 +208,10 @@ def instance_count_analysis(clf, X, y, X_, y_, plot=False, error_func=None):
 	# generate error plot
 	if plot:
 		fig, ax = plt.subplots(figsize=(12,9))
-		ax.plot(error_val, label="Validation Set Error")
-		ax.plot(error_train, label="Training Set Error")
+		ax.plot(indices, error_val, label="Validation Set Error")
+		ax.plot(indices, error_train, label="Training Set Error")
 		
 		ax.set_xlabel("Number of Instances (x " + str(split) + ")", fontsize=18)
-		# i_tmp = indices[0::10]
-		# ax.set_xticks(range(len(i_tmp)))
-		# ax.set_xticklabels(i_tmp, fontsize=10)
 		
 		ax.set_ylabel('Error', fontsize=18)
 
@@ -221,7 +221,7 @@ def instance_count_analysis(clf, X, y, X_, y_, plot=False, error_func=None):
 		ax.legend(loc='best')
 		# ax.grid(True)
 
-		plt.rc('font', **font)
+		# plt.rc('font', **font)
 		plt.savefig(("instance_count_error.png"))
 		plt.show()
 
@@ -232,8 +232,10 @@ def main(traindata, valdata, plot=False, index_rank=None):
 	X_, y_ = mlu.load_csv(valdata, True)
 	y_ = y_.flatten()
 
-	# X = mlu.scale_features(X, 0.0, 1.0)
-	# X_ = mlu.scale_features(X_, 0.0, 1.0)
+	# X = mlu.scale_features(X, -3.0, 3.0)
+	# X_ = mlu.scale_features(X_, -3.0, 3.0)
+	# X = mlu.mean_normalize(X)
+	# X_ = mlu.mean_normalize(X_)
 
 	# validate plot input
 	plot = True if plot == "plot" else False

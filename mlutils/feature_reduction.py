@@ -9,7 +9,7 @@ import math
 
 import mlutils as mlu
 
-def main(reduced, train_file, test_file, rank_list, *amounts):
+def main(train_file, test_file, rank_list, *amounts):
 
 	for data_file in (test_file, train_file):
 		# load data

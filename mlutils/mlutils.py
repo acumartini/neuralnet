@@ -100,6 +100,10 @@ def scale_features(X, new_min, new_max):
 	X_min, X_max = X.min(0), X.max(0)
 	return (((X - X_min) / (X_max - X_min)) * (new_max - new_min + 0.000001)) + new_min
 
+	# dev_note: sklearn formula	
+	# X_std = (X - X.min(axis=0)) / (X.max(axis=0) - X.min(axis=0))
+	# X_scaled = X_std / (max - min) + min
+
 def multiclass_format(y, c):
 	"""
 	Formats dataset labels y to a vector representation for multiclass classification.
@@ -128,6 +132,10 @@ def compute_accuracy(y, y_):
 
 def misclassification_error(y, y_):
 	return 1 - compute_accuracy(y, y_)
+
+def squared_error(y, y_):
+	m = len(y)
+	return (1.0 / (2 * m)) * ((y_ - y) ** 2).sum()
 
 def get_pos_precision(self, CM):
 		Tn, Fp = CM[0]
