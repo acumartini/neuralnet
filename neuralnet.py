@@ -298,7 +298,7 @@ class NeuralNetClassifier():
 
 	def forward_prop(self, x_, thetas=None):
 		"""
-		Forward propagate the activation values starting with the input layer.
+		Forward propagate activation values starting with the input layer.
 		"""
 		a = np.array(()) # store activation values for each hidden and output layer unit
 
@@ -315,8 +315,7 @@ class NeuralNetClassifier():
 
 	def back_prop(self, x, y, a_, thetas):
 		"""
-		Back propagate the error found when comparing the output layer activation values to the
-		the label values.
+		Back propagate the error found when comparing output layer activation values to label values.
 		"""
 		a = self.unpack_activations(a_) # activation values for each layer
 		d = [a[-1] - y] # delta_L (prediction error in output layer)
@@ -339,7 +338,7 @@ class NeuralNetClassifier():
 
 	def estimate_gradient(self, X, y):
 		"""
-		Use a two-sided distance method to estimate the derivative of the cost function.
+		Use the two-sided distance method to estimate the derivative of the cost function.
 		"""
 		epsilon = .0001 # the the one-sided distance from the actual theta parameter value
 
@@ -361,7 +360,7 @@ class NeuralNetClassifier():
 
 	def compute_activation(self, z):
 		"""
-		The logistic function used to compute activation values.
+		Computes activation values using the logistic function.
 		"""
 		return np.divide(1.0 , (1 + np.exp(- z)))
 
