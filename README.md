@@ -10,7 +10,7 @@ A vectorized implementation of an artificial neural network learning algorithm w
 		It is important to note that speeds are only slightly faster than standard gradient descent using minibatch with
 		the advantage that the learning rate does not need to be set manually. <br>
 		Both methods require very low tolerance setting to avoid early iteration stopping with deep networks.  Overall,
-		standard gradient descent methods tend to have slightly more variation in prediction results with deeper networks. Note that it is very difficult to learn anything interested using networks with more than two hidden layers for any gradient descent method due to "the fading gradient" problem.</li>
+		standard gradient descent methods tend to have slightly more variation in prediction results with deeper networks. Note that it is difficult to learn anything interesting with deep networks of more than two hidden layers due to the "fading gradient" problem.</li>
 	</ul>
 </li>
 <li>Break main() and minimize() methods into separate files to isolate NN class functionality.
