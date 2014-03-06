@@ -6,6 +6,7 @@ import numpy as np
 import csv
 import sys
 import math
+import copy
 from time import time
 
 import mlutils as mlu
@@ -24,7 +25,7 @@ class InfoRank():
 		@returns: rank_list - a sorted list of features/original_index pairs.
 		"""
 		self.top = top
-		self.feat_indices = [x for x in xrange(X.shape[1])]
+		self.feat_indices = [n for n in xrange(X.shape[1])]
 		self.feat_cards = [] # stores value cardinalities for each feature
 
 		# calculate domain cardinailties for each feature and save index in the name hash
@@ -34,7 +35,7 @@ class InfoRank():
 			self.feat_cards.append(len(vals))
 		
 		# create rank list, zip features, and sort
-		rank_list = self.choose_best_features(X, y)
+		gains = self.choose_best_features(X, y)
 		rank_list = zip(gains, self.feat_indices)
 		rank_list.sort()
 		rank_list.reverse()
@@ -44,10 +45,9 @@ class InfoRank():
 			return rank_list
 		return rank_list[:self.top]
 
-	def choose_best_feature(self, X, y):
+	def choose_best_features(self, X, y):
 		"""
-		@returns: The feature with the highest information gain among the remaining
-				  choices in the data array
+		@returns: The list of gains for each feature in the dataset.
 	  	"""
 	  	# check for final column
 	  	if X.shape[1] == 1:
@@ -279,8 +279,8 @@ def main(binary_data, rank_file):
 	"""
 	Manages files and operations for decision tree creation
 	"""
-	# open and load csv files
-	X, y = mlu.load_csv(binary_data)
+	# open and load binary data from csv
+	X, y = mlu.load_csv(binary_data, False, True, 'int')
 
 	# parameters
 	criterion = 'entropy'

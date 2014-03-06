@@ -9,28 +9,6 @@ import math
 
 import mlutils as mlu
 
-def main(train_file, test_file, rank_list, *amounts):
-
-	for data_file in (test_file, train_file):
-		# load data
-		X, y = mlu.load_csv(data_file)
-
-		for amount in amounts:
-			# reduce the features
-			X_ = reduce_data_features(X, rank_list, int(amount))
-
-			# append labels
-			X_ = np.hstack((X_, y))
-
-			# write the new csv file
-			print "Writing reduced data file for amount =", amount, "..."	
-			dfile = data_file.replace(".csv", "-F" + str(amount) + ".csv")
-			with open(dfile, 'wb') as data:
-				writer = csv.writer(data, delimiter=',',quoting=csv.QUOTE_MINIMAL)
-				writer.writerows(list(X_))
-
-	print "Finished!"
-
 
 def reduce_features(X, rank_list, top=None):
 	# removes features based on info_gain criterion and pre-calculated gain lists
@@ -50,13 +28,36 @@ def reduce_features(X, rank_list, top=None):
 		count = 0
 		for rank, index in rank_list:
 			if count < top:
-				index = rank[1].strip()
+				index = int(index.strip())
 				for i in xrange(X_.shape[0]):
 					X_[i][count] = X[i][index]
 			count += 1
 
 	print "Finished reduction with:\nX_.shape =", X_.shape
 	return X_
+
+
+def main(train_file, test_file, rank_list, *amounts):
+
+	for data_file in (train_file, test_file):
+		# load data
+		X, y = mlu.load_csv(data_file)
+
+		for amount in amounts:
+			# reduce the features
+			X_ = reduce_features(X, rank_list, int(amount))
+
+			# append labels
+			X_ = np.hstack((X_, y))
+
+			# write the new csv file
+			print "Writing reduced data file for amount =", amount, "..."	
+			dfile = data_file.replace(".csv", "-F" + str(amount) + ".csv")
+			with open(dfile, 'wb') as data:
+				writer = csv.writer(data, delimiter=',',quoting=csv.QUOTE_MINIMAL)
+				writer.writerows(list(X_))
+
+	print "Finished!"
 
 
 if __name__ == '__main__':

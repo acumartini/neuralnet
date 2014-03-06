@@ -24,7 +24,7 @@ def save_data(data, method, path):
 	else:
 		raise IOError("Data format not recognized.")
 
-def load_csv(data, shuffle=False, split=True):
+def load_csv(data, shuffle=False, split=True, data_type='float32'):
 	"""
 	Loads the csv files into numpy arrays.
 	@parameters: data The data file in csv format to be loaded
@@ -33,7 +33,7 @@ def load_csv(data, shuffle=False, split=True):
 			  y - numpy array of labels
 	"""
 	print "Loading data from", data
-	dset = np.loadtxt(data, delimiter=",", dtype='float32')
+	dset = np.loadtxt(data, delimiter=",", dtype=data_type)
 	return shuffle_split(dset, shuffle, split)
 
 def save_csv(data, path):
@@ -98,7 +98,7 @@ def mean_normalize(X, std=False):
 def scale_features(X, new_min, new_max):
 	# scales all features in dataset X to values between new_min and new_max
 	X_min, X_max = X.min(0), X.max(0)
-	return (((X - X_min) / (X_max - X_min)) * (new_max - new_min + 0.000001)) + new_min
+	return (((X - X_min) / (X_max - X_min + 0.000001)) * (new_max - new_min)) + new_min
 
 	# dev_note: sklearn formula	
 	# X_std = (X - X.min(axis=0)) / (X.max(axis=0) - X.min(axis=0))
@@ -144,15 +144,20 @@ def get_pos_precision(self, CM):
 			return 0.0
 		return float(Tp) / (Tp + Fp)
 
-def get_pos_recall(self, CM):
+def get_pos_recall(CM):
 	Tn, Fp = CM[0]
 	Fn, Tp = CM[1]
 	if Tp + Fn == 0:
 		return 0.0
 	return float(Tp) / (Tp + Fn)
 
-def get_f_measure(self, P, R):
-	return ((1 + self.beta**2) * P * R) / (((self.beta**2) * P) + R)
+def get_f_measure(P, R, exp=2):
+	return ((1 + self.beta**exp) * P * R) / (((self.beta**exp) * P) + R)
+
+def get_post_f_measure(CM, exp=2):
+	P = get_pos_precision(CM)
+	R = get_pos_recall(CM)
+	return get_f_measure(P, R, exp)
 
 ### Test Datasets ### 
 # TODO: add test dataset loading functionality

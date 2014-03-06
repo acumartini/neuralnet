@@ -56,6 +56,7 @@ def tune_features(clf, X_train, y_train, X_val, y_val, plot=False, index_rank=No
 		# create a deep copy of the original estimator
 		clf_tmp = clone(clf)
 
+		print "number of features:", e
 		# train/test and store
 		# training set
 		clf_tmp.fit(X, y_train)
