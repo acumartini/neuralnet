@@ -10,8 +10,7 @@ A vectorized implementation of an artificial neural network learning algorithm w
 		It is important to note that speeds are only slightly faster than standard gradient descent using minibatch with
 		the advantage that the learning rate does not need to be set manually. <br>
 		Both methods require very low tolerance setting to avoid early iteration stopping with deep networks.  Overall,
-		standard gradient descent methods tend to have slightly more variation in prediction results with deeper networks. 
-		<br> No method currently learns anything interested for networks with more than two hidden layers.</li>
+		standard gradient descent methods tend to have slightly more variation in prediction results with deeper networks. Note that it is very difficult to learn anything interested using networks with more than two hidden layers for any gradient descent method due to "the fading gradient" problem.</li>
 	</ul>
 </li>
 <li>Break main() and minimize() methods into separate files to isolate NN class functionality.
@@ -31,7 +30,7 @@ A vectorized implementation of an artificial neural network learning algorithm w
 <li>Apply MapReduce parallelization by splitting summations over multiple cores (Python Pools).
 	<ul><li>HIGH PRIOIRTY: This is an important feature to add in terms of scalability.  There may will be measurable
 	gains achieved if the implementation is written efficiently. <br>UPDATE: My implementation of parallel summation for
-	logistic regression in clojure indicates that this may only be beneficial for very large data structures where each
+	logistic regression in Clojure indicates that this may only be beneficial for very large data structures where each
 	component of the summation requires significant processing.  In other words, the overhead of map-reduce is
 	a significant consideration.</li></ul>
 </li>
