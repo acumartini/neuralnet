@@ -499,6 +499,18 @@ def main(train_file, test_file, load_method="csv", opti_method=None, maxiter=100
 	# output accuracy
 	print 'Accuracy: ', mlu.compute_accuracy(y_test, y_pred)
 
+	# output sklearn style results if the module is availble
+	try:
+		from sklearn.metrics import classification_report as cr
+		from sklearn.metrics import confusion_matrix as cm
+		print
+		print "Classification results:"
+		print cr(y_test, y_pred)
+		print cm(y_test, y_pred)
+	except:
+		pass
+
+
 if __name__ == '__main__':
 	"""
 	The main function is called when neuralnet.py is run from the command line with arguments.
