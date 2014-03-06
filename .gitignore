@@ -8,3 +8,6 @@
 ### Specific ###
 process_log.txt
 sparse_autoencoder.py
+
+### Local Data ###
+local/
