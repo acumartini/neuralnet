@@ -26,6 +26,7 @@ import math
 import csv
 import scipy.optimize as opti
 import numpy as np
+from textwrap import fill
 # np.seterr(all='raise')
 from mlutils import mlutils as mlu
 
@@ -75,7 +76,12 @@ class NeuralNetClassifier():
 		self.threshold = 0.5 # class prediction threshold
 
 	def __str__(self):
-		return "<Neural Network Classifier Instance: units=" + str(self.units) + ">"
+		info =  "<Neural Network Classifier Instance: hidden_units=" + str(self.units) + ", maxiter="
+		info += str(self.maxiter) + ", optimization_method=" + self.method + ", batch_size="
+		info += str(self.batch_size) + ", regularization_term=" + str(self.lmbda) + ", alpha=" + str(self.alpha)
+		info += ", beta=" + str(self.beta) + ">"
+		return info
+
 
 	# =====================================================================================
 	# Optimization
@@ -156,7 +162,7 @@ class NeuralNetClassifier():
 				# compute learning rate
 				learning_rate = self.alpha / (self.beta + iteration)
 
-				mags_tmp = [] # temporarily store magnitudes of each batch to calculate an average
+				mini_batch_mags = [] # temporarily store magnitudes of each batch to calculate an average
 				step = 0 # stores last update value for momentum calculations
 
 				# iterate through batches
@@ -194,16 +200,19 @@ class NeuralNetClassifier():
 							self.theta -= step
 							last_step = step
 
-						# calculate the magnitude of the gradient and check for convergence
+						# calculate the magnitude of the gradient for the current mini-batch
 						mag = np.linalg.norm(D)
 						mags.append(mag)
-						mags_tmp.append(mag)
-						if gtol > mag:
-							break
+						mini_batch_mags.append(mag)
+				
+				# check for convergence
+				mag_mean = np.mean(mini_batch_mags)
+				if gtol > mag_mean:
+					break
 				
 				# output iteration number and avg magnitude of the gradient if appropriate
-				if len(mags_tmp) > 0:
-					print "iteration", iteration, ":", np.mean(mags_tmp)
+				if len(mini_batch_mags) > 0:
+					print "iteration", iteration, ":", mag_mean
 				else:
 					print "iteration", iteration
 
