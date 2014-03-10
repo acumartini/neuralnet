@@ -22,11 +22,9 @@
 #==============================================================================
 
 import sys
-import math
 import csv
 import scipy.optimize as opti
 import numpy as np
-from textwrap import fill
 # np.seterr(all='raise')
 from mlutils import mlutils as mlu
 
@@ -166,7 +164,7 @@ class NeuralNetClassifier():
 				step = 0 # stores last update value for momentum calculations
 
 				# iterate through batches
-				for batch_count, (X_, y_) in enumerate(self.mini_batch(X, y)):
+				for batch_count, (X_, y_) in enumerate(mlu.mini_batch(X, y, self.batch_size)):
 					if method == "l-bfgs":
 						# L-BFGS-b optimization
 						theta, f, d = opti.fmin_l_bfgs_b(
@@ -221,30 +219,6 @@ class NeuralNetClassifier():
 
 		return theta #, costs, mags
 
-	def mini_batch(self, X, y):
-		"""
-		Returns a generator object representing the X, y pairs for each mini-batch.  Generates
-		batches using the batch_size parameter.  A batch_size of -1 implies batch processing.
-		"""
-		b = self.batch_size # var to clean up code
-
-		if b == -1 or b >= self.m: # batch process by default
-			yield (X, y)
-		else:
-			# test if the batch size requires a remainder yield
-			size = float(self.m) / b
-			final_batch = True if (size % 1 > 0) else False
-
-			# iterate dataset and yield batches for gradient descent processing
-			i = 0 # instance index
-			for j in range(int(math.floor(size))):
-				X_, y_ = X[i:i + b], y[i:i + b]
-				yield (X_, y_)
-				i += b
-
-			if final_batch: # yield the remaining instances
-				X_, y_ = X[i:], y[i:]
-				yield (X_, y_)
 
 	# =====================================================================================
 	# Cost Function and Gradient Computation

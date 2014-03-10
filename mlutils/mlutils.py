@@ -5,6 +5,7 @@
 import numpy as np
 import h5py
 import csv
+import math
 
 ### DATA IO ###
 
@@ -158,6 +159,34 @@ def get_post_f_measure(CM, exp=2):
 	P = get_pos_precision(CM)
 	R = get_pos_recall(CM)
 	return get_f_measure(P, R, exp)
+
+### mini-batch processing ###
+
+def mini_batch(X, y, batch_size):
+	"""
+	Returns a generator object representing the X, y pairs for each mini-batch.  Generates
+	batches using the batch_size parameter.  A batch_size of -1 implies batch processing.
+	"""
+	m = X.shape[0]
+	b = batch_size # var to clean up code
+
+	if b == -1 or b >= m: # batch process by default
+		yield (X, y)
+	else:
+		# test if the batch size requires a remainder yield
+		size = float(m) / b
+		final_batch = True if (size % 1 > 0) else False
+
+		# iterate dataset and yield batches for gradient descent processing
+		i = 0 # instance index
+		for j in range(int(math.floor(size))):
+			X_, y_ = X[i:i + b], y[i:i + b]
+			yield (X_, y_)
+			i += b
+
+		if final_batch: # yield the remaining instances
+			X_, y_ = X[i:], y[i:]
+			yield (X_, y_)
 
 ### Test Datasets ### 
 # TODO: add test dataset loading functionality
