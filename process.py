@@ -224,7 +224,7 @@ class CLFProcessor():
 
 		return clf_descr, p_score_avg, r_score_avg, f_measure_avg, train_time, test_time, proba
 
-	def plot_results(self, results, y_test):
+	def plot_results(self, results, y_test, metrics_graph=True, auc_graph=True):
 		# variable setup
 		reduced = self.rank_list is not None
 		num_feats = self.reduce_amount
@@ -274,74 +274,76 @@ class CLFProcessor():
 		pl.rc('font', **font)
 
 		# create precision and recall bar chart
-		title = pl.title("Overall Classifier Performance")
-		title.set_y(1.03)
-		
-		rects = pl.barh(indices + .3, f_measure, .15, label=r'$\bf F_{1}$' + ' measure', color=gg)
-		autolabel(rects)
-		rects = pl.barh(indices + .15, r_scores, .15, label="recall", color=r)
-		autolabel(rects)
-		rects = pl.barh(indices, p_scores, .15, label="precision", color=b)
-		autolabel(rects)
-		
-		pl.yticks(())
-		pl.legend(loc='best', prop={'size':15})
-		pl.subplots_adjust(left=.25)
+		if (metrics_graph):
+			title = pl.title("Overall Classifier Performance")
+			title.set_y(1.03)
+			
+			rects = pl.barh(indices + .3, f_measure, .15, label=r'$\bf F_{1}$' + ' measure', color=gg)
+			autolabel(rects)
+			rects = pl.barh(indices + .15, r_scores, .15, label="recall", color=r)
+			autolabel(rects)
+			rects = pl.barh(indices, p_scores, .15, label="precision", color=b)
+			autolabel(rects)
+			
+			pl.yticks(())
+			pl.legend(loc='best', prop={'size':15})
+			pl.subplots_adjust(left=.25)
 
-		# add classifier names
-		for i, c in zip(indices, clf_names):
-		    pl.text(-.3, i, c)
+			# add classifier names
+			for i, c in zip(indices, clf_names):
+			    pl.text(-.3, i, c)
 
-		if self.boost:
-			pl.savefig(('PRT_graph-R' + str(reduced) + '-F' + str(num_feats) + '-B' + str(self.boost_amount) + '.png'),
-						facecolor=fig.get_facecolor(), edgecolor='none')
-		else:
-			print "Saving Metrics Plot..."
-			pl.savefig(('PRT_graph-R' + str(reduced) + '-F' + str(num_feats) + '.png'),
-						facecolor=fig.get_facecolor(), edgecolor='none')
+			if self.boost:
+				pl.savefig(('PRT_graph-R' + str(reduced) + '-F' + str(num_feats) + '-B' + str(self.boost_amount) + '.png'),
+							facecolor=fig.get_facecolor(), edgecolor='none')
+			else:
+				print "Saving Metrics Plot..."
+				pl.savefig(('PRT_graph-R' + str(reduced) + '-F' + str(num_feats) + '.png'),
+							facecolor=fig.get_facecolor(), edgecolor='none')
 
 
 		# create Proba AUC Graph
-		prob_results = []
-		for i in xrange(len(results[6])):
-			if results[6][i] != None:
-				prob_results.append((results[0][i], results[6][i]))
+		if (auc_graph):
+			prob_results = []
+			for i in xrange(len(results[6])):
+				if results[6][i] != None:
+					prob_results.append((results[0][i], results[6][i]))
+			
+			pl.clf() # clear figure
+
+			fig = pl.figure(figsize=(31.0, 15.0))
+			title = pl.title("Precision and Recall Curves")
+			title.set_y(1.03)
+
+			pl.xlabel('Recall')
+			ylab = pl.ylabel('Precision')
+			pl.ylim([0.0, 1.05])
+			pl.xlim([0.0, 1.0])
+
+			fig.set_facecolor(llg)
+
+			font = {'family' : 'sans-serif',
+					'style'  : 'normal',
+			        'weight' : 'semibold',
+			        'size'   : 22}
+			pl.rc('font', **font)
 		
-		pl.clf() # clear figure
+			for clf, probas in prob_results:
+				if clf != 'GaussianNB': # avoid poor threshold graphing for GNB
+					precision, recall, thresholds = precision_recall_curve(y_test, probas[:,1])
+					area = auc(recall, precision)
+					print clf, area
+					pl.plot(recall, precision, label=(clf + " : AUC = " + str(area)), lw=1.3)
 
-		fig = pl.figure(figsize=(31.0, 15.0))
-		title = pl.title("Precision and Recall Curves")
-		title.set_y(1.03)
+			pl.legend(loc='best', prop={'size':18})
 
-		pl.xlabel('Recall')
-		ylab = pl.ylabel('Precision')
-		pl.ylim([0.0, 1.05])
-		pl.xlim([0.0, 1.0])
-
-		fig.set_facecolor(llg)
-
-		font = {'family' : 'sans-serif',
-				'style'  : 'normal',
-		        'weight' : 'semibold',
-		        'size'   : 22}
-		pl.rc('font', **font)
-	
-		for clf, probas in prob_results:
-			if clf != 'GaussianNB': # avoid poor threshold graphing for GNB
-				precision, recall, thresholds = precision_recall_curve(y_test, probas[:,1])
-				area = auc(recall, precision)
-				print clf, area
-				pl.plot(recall, precision, label=(clf + " : AUC = " + str(area)), lw=1.3)
-
-		pl.legend(loc='best', prop={'size':18})
-
-		if self.boost:
-			pl.savefig(('AUC_graph-R' + str(reduced) + '-F' + str(num_feats) + '-B' + str(boost_amount) + '.png'),
-						facecolor=fig.get_facecolor(), edgecolor='none')
-		else:
-			print "Saving AUC Plot..."
-			pl.savefig(('AUC_graph-R' + str(reduced) + '-F' + str(num_feats) + '.png'),
-						facecolor=fig.get_facecolor(), edgecolor='none')
+			if self.boost:
+				pl.savefig(('AUC_graph-R' + str(reduced) + '-F' + str(num_feats) + '-B' + str(boost_amount) + '.png'),
+							facecolor=fig.get_facecolor(), edgecolor='none')
+			else:
+				print "Saving AUC Plot..."
+				pl.savefig(('AUC_graph-R' + str(reduced) + '-F' + str(num_feats) + '.png'),
+							facecolor=fig.get_facecolor(), edgecolor='none')
 
 
 def main(traindata, testdata, load_method="csv", feature_type='continuous', boost=False, boost_amount=0,

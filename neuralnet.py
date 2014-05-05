@@ -23,6 +23,7 @@
 
 import sys
 import csv
+import cPickle as pickle
 import scipy.optimize as opti
 import numpy as np
 # np.seterr(all='raise')
@@ -99,16 +100,15 @@ class NeuralNetClassifier():
 			self.units.insert(0, int(X.shape[1]))
 
 		# calculate and append the number of output units
-		train_clss = np.unique(y) # get the unique elements of the labels array
-		train_clss.sort()
-		num_clss = len(train_clss)
+		self.class_map, self.class_map_rev = mlu.get_unique_class_map(y)
+		num_clss = len(self.class_map)
 		if num_clss == 2:
 			self.units.append(1)
 		else:
 			self.units.append(num_clss)
 
 		# format label to multiclass classification arrays
-		y = mlu.multiclass_format(y, num_clss)
+		y = mlu.multiclass_format(y, self.class_map_rev)
 
 		# network structure parameters
 		self.L = len(self.units) # the total number of layers including input and output layers
@@ -407,7 +407,7 @@ class NeuralNetClassifier():
 		if self.k < 2:
 			y_pred = [proba > self.threshold for proba in probas]
 		else:
-			y_pred = [np.argmax(proba) for proba in probas]
+			y_pred = [self.class_map[np.argmax(proba)] for proba in probas]
 		return np.array(y_pred)
 
 	def get_cost(self, X, y):
@@ -418,17 +418,15 @@ class NeuralNetClassifier():
 		return self.cost(self.theta, X, y)
 
 	# ==================================================================================
-	# Model Output
+	# Model Storage/Loading Utilities
 
-	# TODO
-	# def print_model(self, features, model_file):
-	# 	# wite the parameter values corresponding to each feature to the given model file
-	# 	with open(model_file, 'w') as mf:
-	# 		for i in range(self.n):
-	# 			if i == 0:
-	# 				mf.write('%f\n' % (self.theta[i]))
-	# 			else:
-	# 				mf.write('%s %f\n' % (features[i-1], self.theta[i]))
+	def save_model(self, model_file):
+		# pickle parameter values for future use
+		pickle.dump( self.theta, open( model_file, 'wb' ) )
+
+	def load_model(self, model_file):
+		# set theta parameters to values found in the model_file
+		self.theta = pickle.load( open( model_file, 'rb' ) )
 
 
 def main(train_file, test_file, load_method="csv", opti_method=None, maxiter=100, 
@@ -492,6 +490,9 @@ def main(train_file, test_file, load_method="csv", opti_method=None, maxiter=100
 		print cm(y_test, y_pred)
 	except:
 		pass
+
+	# save model parameters as a pickle
+	NNC.save_model("NNCModel.p")
 
 
 if __name__ == '__main__':

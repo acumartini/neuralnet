@@ -105,18 +105,35 @@ def scale_features(X, new_min, new_max):
 	# X_std = (X - X.min(axis=0)) / (X.max(axis=0) - X.min(axis=0))
 	# X_scaled = X_std / (max - min) + min
 
-def multiclass_format(y, c):
+def get_unique_class_map(y):
+	"""
+	Returns a dictionary of unique classes with their enumeration as values.
+	"""
+	# get a sorted list of unique classes
+	train_clss = np.unique(y) # get the unique elements of the labels array
+	train_clss.sort()
+	
+	# populate class map
+	class_map = {}
+	class_map_rev = {}
+	for i, clss in enumerate(train_clss):
+		class_map[i] = clss
+		class_map_rev[clss] = i
+	
+	return class_map, class_map_rev
+
+def multiclass_format(y, cm):
 	"""
 	Formats dataset labels y to a vector representation for multiclass classification.
 	i.e., If there are 3 classes {0,1,2}, then all instances of 0 are transformed to
 	[1,0,0], 1''s are transformed to [0,1,0], and 2's become [0,0,1]
 	"""
-	if c == 2: # standard classification problem, formatting not required
+	if len(cm) == 2: # standard classification problem, formatting not required
 		return y
 	else:
-		y_ = np.zeros(shape=(len(y), c));
-		for i, lable in enumerate(y):
-			y_[i][int(lable)] = 1.0
+		y_ = np.zeros(shape=(len(y), len(cm)));
+		for i, label in enumerate(y):
+			y_[i][cm[int(label)]] = 1.0
 		return y_
 
 ### RESULT METRICS ###
@@ -139,11 +156,11 @@ def squared_error(y, y_):
 	return (1.0 / (2 * m)) * ((y_ - y) ** 2).sum()
 
 def get_pos_precision(self, CM):
-		Tn, Fp = CM[0]
-		Fn, Tp = CM[1]
-		if Tp + Fp == 0:
-			return 0.0
-		return float(Tp) / (Tp + Fp)
+	Tn, Fp = CM[0]
+	Fn, Tp = CM[1]
+	if Tp + Fp == 0:
+		return 0.0
+	return float(Tp) / (Tp + Fp)
 
 def get_pos_recall(CM):
 	Tn, Fp = CM[0]
