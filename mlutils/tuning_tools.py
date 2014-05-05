@@ -6,12 +6,13 @@
 # 2-9-14
 
 import sys
+from sets import Set
 import cPickle
 import numpy as np
 import pylab as pl
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-import mlutils as mlu
+from mlutils import mlutils as mlu
 from sklearn.base import clone
 
 # plot formating variables
@@ -160,20 +161,20 @@ def instance_count_analysis(clf, X, y, X_, y_, plot=False, error_func=None):
 		error_func = mlu.misclassification_error
 
 	# train/test iterative storing results for plotting etc.
-	min_samples = 200
+	min_samples = len(X)
 	error_train = [] # store training set errors
 	error_val = [] # store validation set errors
 
 	# get minimum instance size so that there are positive and negative examples
-	y_0 = y[0]
+	unique_clss = np.unique(y)
+	s = Set()
 	min_count = 0
-	for i in range(len(y)):
-		if y[i] != y_0:
-			min_count = i + 1
-			break
+	while len(s) != len(unique_clss):
+		s.add( y[min_count] )
+		min_count += 1
 
 	# build breakpoint indices array
-	if len(X) > min_samples: # the maximum number of data points is 100
+	if len(X) >= min_samples: # the maximum number of data points is 100
 		split = int(len(X) / min_samples)
 		indices = []
 		i = split
@@ -212,7 +213,7 @@ def instance_count_analysis(clf, X, y, X_, y_, plot=False, error_func=None):
 		ax.plot(indices, error_val, label="Validation Set Error")
 		ax.plot(indices, error_train, label="Training Set Error")
 		
-		ax.set_xlabel("Number of Instances (x " + str(split) + ")", fontsize=18)
+		ax.set_xlabel("Number of Instances", fontsize=18)
 		
 		ax.set_ylabel('Error', fontsize=18)
 
