@@ -1,6 +1,6 @@
 # Adam Martini
 # ml_suite
-# 2-4-14
+# 5-5-14
 
 import numpy as np
 import csv
@@ -10,6 +10,7 @@ import copy
 from time import time
 
 import mlutils as mlu
+from sklearn import preprocessing
 
 class InfoRank():
 	"""
@@ -275,12 +276,30 @@ class InfoRank():
 		return entropy(cardinality, A, y, p, n)
 
 
-def main(binary_data, rank_file):
+def main(binary_data, rank_file, binarize=False):
 	"""
 	Manages files and operations for decision tree creation
 	"""
-	# open and load binary data from csv
-	X, y = mlu.load_csv(binary_data, False, True, 'int')
+	# check binarize argument and load dataset accordingly
+	if binarize == 'True':
+		# load data with float32 dataype
+		X, y = mlu.load_csv(binary_data, False, True)
+
+		# scale features to between -1 and 1
+		X = mlu.scale_features(X, -1.0, 1.0)
+
+		# binarize using threshold of 0.0
+		binarizer = preprocessing.Binarizer().fit(X) # default threshold is 0.0
+		X = binarizer.transform(X)
+		X = X.astype(int)
+		y = y.astype(int)
+	else: 
+		# open and load binary data from csv
+		X, y = mlu.load_csv(binary_data, False, True, 'int')
+
+	# format labels
+	cm, cmr = mlu.get_unique_class_map(y)
+	y = mlu.replace_labels(y, cmr)
 
 	# parameters
 	criterion = 'entropy'
