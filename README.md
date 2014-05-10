@@ -1,6 +1,6 @@
 # neuralnet.py
 
-A vectorized implementation of an artificial neural network learning algorithm written in python using numpy.  The final implementation of this project will support a variable number of hidden layers (of variable size), multiclass classification, advanced optimized methods using scipy (BFGS, CG), code optimizations using LLVM interfaces, and options for unsupervised training of DBN's.
+A vectorized implementation of an artificial neural network learning algorithm written in python using numpy. The current version supports a variable number of hidden layers (of variable size), multi-class classification, mini-batch processing, and advanced optimized methods using scipy (L-BFGS, CG).
 
 ## Current Work Objectives
 <ol>
